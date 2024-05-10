@@ -75,11 +75,28 @@ keyboard:
         JNZ is_key_pressed ; Se não foi libertada, espera que seja
         JMP keyboard_end   ; Termina a rotina
 
+    convert_column:
+        PUSH R8
+        MOV R8, 0
+
+        cc_start:
+            CMP R0, 0
+            JZ cc_end
+            INC R8
+            SHR R0, 1
+            JNZ cc_start
+
+        cc_end:
+            DEC R8
+            MOV R0, R8
+            POP R8
+            RET
+
     keyboard_end:               ; Termina a rotina
         POP R0                  ; Recupera a coluna pressionada
+        CALL convert_column     ; Converte a coluna pressionada para valores de 0 a 3
         SHL R7, 2               ; Multiplica o número da linha por 4
         ADD R7, R0              ; Adiciona o número da coluna
-        DEC R7                  ; Decrementa o número da tecla
         CALL keyboard_command   ; Executa o comando da tecla pressionada
 
     POP R7
