@@ -26,8 +26,8 @@ PLACE 0
     MOV R10,0
     MOV R11,0
     
-main:
-    CALL keyboard
+main: ; Ciclo principal
+    CALL keyboard ; Teclado
     JMP main
 
 keyboard:
@@ -54,7 +54,7 @@ keyboard:
         AND R0, R5
         CMP R0, 0
         JZ next_line
-        JMP keyboard_end
+        JMP is_key_pressed
 
     next_line:
         SHL R1, 1
@@ -69,6 +69,7 @@ keyboard:
         AND R0, R5
         CMP R0, 0
         JNZ is_key_pressed
+        JMP keyboard_end
 
     keyboard_end:
         SHL R7, 2
