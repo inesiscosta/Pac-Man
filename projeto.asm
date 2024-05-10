@@ -57,7 +57,7 @@ keyboard:
         AND R0, R5          ; Aplica a máscara
         CMP R0, 0           ; Verifica se alguma tecla foi pressionada
         JZ next_line        ; Se não foi pressionada, passa para a próxima linha
-        PUSH R0
+        PUSH R0             ; Guarda a coluna pressionada
         JMP is_key_pressed  ; caso contrário, espera que deixe de ser pressionada
 
     next_line:
@@ -75,11 +75,12 @@ keyboard:
         JNZ is_key_pressed ; Se não foi libertada, espera que seja
         JMP keyboard_end   ; Termina a rotina
 
-    keyboard_end:
-        POP R0             ; Termina a rotina
-        SHL R7, 2             ; Multiplica o número da linha por 4
-        ADD R7, R0             ; Adiciona o número da coluna
-        CALL keyboard_command ; Executa o comando da tecla pressionada
+    keyboard_end:               ; Termina a rotina
+        POP R0                  ; Recupera a coluna pressionada
+        SHL R7, 2               ; Multiplica o número da linha por 4
+        ADD R7, R0              ; Adiciona o número da coluna
+        DEC R7                  ; Decrementa o número da tecla
+        CALL keyboard_command   ; Executa o comando da tecla pressionada
 
     POP R7
     POP R6
@@ -93,13 +94,13 @@ keyboard:
 keyboard_command:
     PUSH R8
     PUSH R9
-    MOV R8, MAX_COUNTER
-    MOV R9, MIN_COUNTER
-    CMP R7, 1
-    JZ kc_increment
-    CMP R7, 2
-    JZ kc_decrement
-    JMP kc_end
+    MOV R8, MAX_COUNTER ; R8 = MAX_COUNTER
+    MOV R9, MIN_COUNTER ; R9 = MIN_COUNTER
+    CMP R7, 0           ; TECLA 0
+    JZ kc_increment     ; Incrementa o Contador
+    CMP R7, 1           ; TECLA 1
+    JZ kc_decrement     ; Decrementa o Contador
+    JMP kc_end          ; Termina a Rotina
     
     kc_increment:
         ; implement Routine
