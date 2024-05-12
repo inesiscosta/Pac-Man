@@ -37,8 +37,7 @@ BOX_LIN                EQU  11         ; linha da caixa
 BOX_COL	               EQU  26         ; coluna da caixa
 
 GHOST_LIN              EQU  13         ; linha inicial do fantasma (a meio do ecrã)
-GHOST_COL_LEFT	       EQU  0          ; possível coluna inicial do fantasma (encostado ao limite esquerdo)
-GHOST_COL_RIGHT	       EQU  59         ; possível coluna inicial do fantasma (encostado ao limite direito 63(max) - 4(tamanho GHOST))
+GHOST_COL	           EQU  0          ; coluna inicial do fantasma (encostado ao limite esquerdo)
 
 MIN_COL		           EQU  0		   ; número da coluna mais à esquerda que o objeto pode ocupar
 MAX_COL		           EQU  63         ; número da coluna mais à direita que o objeto pode ocupar
