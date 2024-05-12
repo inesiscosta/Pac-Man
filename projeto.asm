@@ -14,9 +14,12 @@ TEC_L                  EQU 0C000H      ; endereço das linhas do teclado (perif�
 TEC_C                  EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
 LINHA                  EQU 1
 MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+TEC_INCREMENTA         EQU 82H         ; tecla que incrementa o contador
+TEC_DECREMENTA         EQU 81H         ; tecla que decrementa o contador
 
-MIN_COUNTER            EQU 0
-MAX_COUNTER            EQU 100
+INICIAL_COUNTER        EQU 0000H
+MIN_COUNTER            EQU 0000H
+MAX_COUNTER            EQU 0100H
 
 DEFINE_LINE    		   EQU 600AH      ; endereço do comando para definir a linha
 DEFINE_COLUMN   	   EQU 600CH      ; endereço do comando para definir a coluna
@@ -133,6 +136,9 @@ ghost_position:
 show_ghost:
     CALL draw_object
 
+    MOV R4, DISPLAYS                ; Endereço do periférico dos displays
+    MOV R11, INICIAL_COUNTER        ; Inicializa o display a 0
+    MOV [R4], R11
 main: ; Ciclo principal
     CALL keyboard
     CMP R0, 0
@@ -267,46 +273,42 @@ keyboard:
     PUSH R7
     PUSH R8
 
-    MOV R0, 0           ; Inicializa R0 para guardar a tecla pressionada
-    MOV R2, TEC_L       ; Endereço do periférico das linhas do teclado
-    MOV R3, TEC_C       ; Endereço do periférico das colunas do teclado
-    MOV R4, DISPLAYS    ; Endereço do periférico dos displays
-    MOV R5, MASK_TEC    ; Máscara para a leitura do teclado
+    MOV R0, 0                     ; Inicializa R0 para guardar a tecla pressionada
+    MOV R6, 7
+    MOV R2, TEC_L                 ; Endereço do periférico das linhas do teclado
+    MOV R3, TEC_C                 ; Endereço do periférico das colunas do teclado
+    MOV R5, MASK_TEC              ; Máscara para a leitura do teclado
 
     reset_line: 
         MOV R1, LINHA   ; define a linha a ler (inicialmente a 1)
         MOV R7, 0       ; Inicializa o contador de linhas a 0
 
     check_key:
-        MOVB [R2], R1       ; Ativa a linha para leitura do teclado
-        MOVB R0, [R3]       ; Lê a coluna do teclado
-        AND R0, R5          ; Aplica a máscara
-        CMP R0, 0           ; Verifica se alguma tecla foi pressionada
-        JZ next_line        ; Se não foi pressionada, passa para a próxima linha
-        PUSH R0             ; Guarda a coluna pressionada
-        MOV	R8, 0			; som com número 0
-	    MOV [PLAY_SOUND], R8	; comando para tocar o som
-        JMP is_key_pressed  ; caso contrário, espera que deixe de ser pressionada
+        MOVB [R2], R1           ; Ativa a linha para leitura do teclado
+        MOVB R0, [R3]           ; Lê a coluna do teclado
+        AND R0, R5              ; Aplica a máscara
+        CMP R0, 0               ; Verifica se alguma tecla foi pressionada
+        JZ next_line            ; Se não foi pressionada, passa para a próxima linha
+        PUSH R0                 ; Guarda a coluna pressionada
+        MOV	R8, 0			    ; Som com número 0 MOV [PLAY_SOUND], R8 Comando para tocar o som
+        JMP is_key_pressed      ; Caso contrário, espera que deixe de ser pressionada
 
     next_line:
-        SHL R1, 1      ; Passa para a próxima linha
-        INC R7         ; Incrementa o contador de linhas
-        CMP R7, 4      ; Verifica se já leu todas as linhas
-        JNZ check_key  ; Se não leu todas as linhas, verifica a próxima
-        JMP reset_line ; Caso contrário, reinicia a linha
+        SHL R1, 1               ; Passa para a próxima linha
+        INC R7                  ; Incrementa o contador de linhas
+        CMP R7, 4               ; Verifica se já leu todas as linhas
+        JNZ check_key           ; Se não leu todas as linhas, verifica a próxima
+        JMP reset_line          ; Caso contrário, reinicia a linha
 
     is_key_pressed: 
-        MOVB [R2], R1      ; Ativa a linha para leitura do teclado
-        MOVB R0, [R3]      ; Lê a coluna do teclado
-        AND R0, R5         ; Aplica a máscara
-        CMP R0, 0          ; Verifica se a tecla foi libertada
-        JNZ is_key_pressed ; Se não foi libertada, espera que seja
-        JMP keyboard_end   ; Termina a rotina
+        CALL keyboard_counter   ; Chama a função incrementar
+        MOVB [R2], R1           ; Ativa a linha para leitura do teclado
+        MOVB R0, [R3]           ; Lê a coluna do teclado
+        AND R0, R5              ; Aplica a máscara
+        CMP R0, 0               ; Verifica se a tecla foi libertada
+        JNZ is_key_pressed      ; Se não foi libertada, espera que seja
 
-    keyboard_end:               ; Termina a rotina
-        POP R0                  ; Recupera a coluna pressionada
-        CALL keyboard_command   ; Executa o comando da tecla pressionada
-
+    POP R0                      ; Recupera a coluna pressionada
     POP R8
     POP R7
     POP R6
@@ -317,26 +319,42 @@ keyboard:
     POP R1
     RET
 
-keyboard_command:
+keyboard_counter:
+    PUSH R1
+    PUSH R6
+    PUSH R7
     PUSH R8
     PUSH R9
-    MOV R8, MAX_COUNTER ; R8 = MAX_COUNTER
-    MOV R9, MIN_COUNTER ; R9 = MIN_COUNTER
-    CMP R7, 0           ; TECLA 0
-    JZ kc_increment     ; Incrementa o Contador
-    CMP R7, 1           ; TECLA 1
-    JZ kc_decrement     ; Decrementa o Contador
-    JMP kc_end          ; Termina a Rotina
+    MOV R6, TEC_INCREMENTA
+    MOV R7, TEC_DECREMENTA
+    MOV R8, MAX_COUNTER     ; R8 = MAX_COUNTER
+    MOV R9, MIN_COUNTER     ; R9 = MIN_COUNTER
+    SHL R1, 4               ; Coloca linha nibble heigh
+    OR R1, R0               ; Juntamos a coluna (nibble low)
+    CMP R1, R6              ; Vemos se é a tecla que incrementa
+    JZ counter_increment    ; Incrementa o Contador
+    CMP R1, R7              ; Vemos se é a tecla que decrementa
+    JZ counter_decrement    ; Decrementa o Contador
+    JMP counter_end         ; Termina a Rotina
     
-    kc_increment:
-        ; implement Routine
-        JMP kc_end
+    counter_increment:
+        CMP R11, R8
+        JZ counter_end
+        ADD R11, 1
+        MOV [R4], R11       ; Atualiza o display
+        JMP counter_end
 
-    kc_decrement:
-        ; implement Routine
-        JMP kc_end
+    counter_decrement:
+        CMP R11, R9
+        JZ counter_end
+        SUB R11, 1
+        MOV [R4], R11       ; Atualiza o display
+        JMP counter_end
 
-    kc_end:
+    counter_end:
         POP R9
         POP R8
+        POP R7
+        POP R6
+        POP R1
         RET
