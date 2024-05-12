@@ -234,7 +234,6 @@ keyboard:
     PUSH R8
 
     MOV R0, 0                   ; inicializa R0 para guardar a tecla pressionada
-    MOV R6, 0                   ; inicializa R6 para guardar no display ??????
     MOV R2, TEC_L               ; endereço do periférico das linhas do teclado
     MOV R3, TEC_C               ; endereço do periférico das colunas do teclado
     MOV R5, MASK_TEC            ; máscara para a leitura do teclado
@@ -290,10 +289,12 @@ keyboard:
 ; *****************************************************************************************************************************
 keyboard_counter:
     PUSH R1                 ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R5
     PUSH R6
     PUSH R7
     PUSH R8
     PUSH R9
+    MOV R5, 500             ; inicializa R5 com o valor de iterações para delay
     MOV R6, TEC_INCREMENTA  ; inicializa R6 com o endereço do display
     MOV R7, TEC_DECREMENTA  ; inicializa R7 com o valor da tecla que incrementa o contador
     MOV R8, MAX_COUNTER     ; inicializa R8 com o valor da tecla que decrementa o contador
@@ -309,8 +310,8 @@ keyboard_counter:
     counter_increment:
         CMP R11, R8         ; verifica se o contador está no maior valor possível
         JZ counter_end      ; se sim, não incrementa e salta para o fim da rotina
-        CMP R10, 7          ; compara R10 com 7 (assim só de 7 em 7 é que o counter avança)
-        JNZ delay_i         ; se R10 não for 7 salta para delay_i
+        CMP R10, R5         ; compara R10 com R5
+        JNZ delay_i         ; se R10 não for igual a R5 salta para delay_i
         MOV R10, 0          ; reinicializa R10
         ADD R11, 1          ; se não, incrementa o contador por 1 
         MOV [R4], R11       ; atualiza o display
@@ -322,8 +323,8 @@ keyboard_counter:
     counter_decrement:
         CMP R11, R9         ; verifica se o contador está no mínimo valor possível
         JZ counter_end      ; se sim, não decrementa e salta para o fim da rotina
-        CMP R10, 7          ; compara R10 com 7 (assim só de 7 em 7 é que o counter desçe)
-        JNZ delay_d         ; se R10 não for 7 salta para delay_d
+        CMP R10, R5         ; compara R10 com R5
+        JNZ delay_d         ; se R10 não for igual a R5 salta para delay_d
         MOV R10, 0          ; reinicializa R10
         SUB R11, 1          ; se não, decrementa o contador por 1 
         MOV [R4], R11       ; atualiza o display
@@ -337,5 +338,6 @@ keyboard_counter:
         POP R8
         POP R7
         POP R6
+        POP R5
         POP R1
         RET
