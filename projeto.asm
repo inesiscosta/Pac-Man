@@ -1,21 +1,75 @@
-DISPLAYS EQU 0A000H
+; ***********************************************************************************************************************
+; * Projeto ACOM - PAC-MAN Modificado
+; * Modulo:    projeto.asm
+; * Descrição: Este programa corre uma versão modificada do pac-man o objetivo é
+; *            apanhar os 4 rebuçados sem ser apanhado por um fantasma.
+; ***********************************************************************************************************************
 
-TEC_L EQU 0C000H
-TEC_C EQU 0E000H
+; ***********************************************************************************************************************
+; * Constantes
+; ***********************************************************************************************************************
+DISPLAYS               EQU 0A000H      ;
+
+TEC_L                  EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
+TEC_C                  EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
 LINHA EQU 1
-MASCARA_TEC EQU 0FH
+MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+;UP                    EQU 
+;DOWN                  EQU 
+;LEFT                  EQU 
+;RIGHT                 EQU 
+;UP_LEFT               EQU 
+;UP_RIGHT              EQU 
+;DOWN_LEFT             EQU 
+;DOWN_RIGHT            EQU 
 
-MIN_COUNTER EQU 0
-MAX_COUNTER EQU 100
+MIN_COUNTER            EQU 0
+MAX_COUNTER            EQU 100
 
-PLACE 1000H
+DEFINE_LINE    		   EQU 600AH      ; endereço do comando para definir a linha
+DEFINE_COLUMN   	   EQU 600CH      ; endereço do comando para definir a coluna
+DEFINE_PIXEL    	   EQU 6012H      ; endereço do comando para escrever um pixel
+DELETE_WARNING     	   EQU 6040H      ; endereço do comando para apagar o aviso de nenhum cenário selecionado
+DELETE_SCREEN	 	   EQU 6002H      ; endereço do comando para apagar todos os pixels já desenhados
+SELECT_BACKGROUND_IMG  EQU 6042H      ; endereço do comando para selecionar uma imagem de fundo
+PLAY_SOUND             EQU 605AH      ; endereço do comando para tocar som
+
+START_LIN              EQU  13        ; linha do objeto (a meio do ecrã)
+START_COL	           EQU  30        ; coluna do objeto (a meio do ecrã)
+
+MIN_COL		           EQU  0		  ; número da coluna mais à esquerda que o objeto pode ocupar
+MAX_COL		           EQU  63        ; número da coluna mais à direita que o objeto pode ocupar
+DELAY		           EQU	400H	  ; atraso para limitar a velocidade de movimento do objeto
+
+HEIGHT                 EQU 5          ; altura pacman
+WIDTH		           EQU 4		  ; largura pacman
+YELLOW_PIXEL           EQU 0FFF0H	  ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
+
+; ***********************************************************************************************************************
+; * Dados 
+; ***********************************************************************************************************************
+    PLACE 1000H
+
 pilha:
     STACK 100H;
 
-SP_inicial:
+SP_initial:
 
+DEFINE_PACMAN:  ; tabela que define o objeto (cor, largura, pixels)
+    WORD        HEIGHT
+    WORD        WIDTH
+	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
+    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
+    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
+    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; #### 
+	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
+
+; ***********************************************************************************************************************
+; * Código
+; ***********************************************************************************************************************
 PLACE 0
-    MOV SP, SP_inicial
+start:
+    MOV SP, SP_initial
     MOV R0,0
     MOV R1,0
     MOV R2,0
@@ -28,24 +82,157 @@ PLACE 0
     MOV R9,0
     MOV R10,0
     MOV R11,0
-    
+    MOV  [DELETE_WARNING], R1	    ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV  [DELETE_SCREEN], R1	    ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV [SELECT_BACKGROUND_IMG], R1 ; seleciona o cenário de fundo
+    MOV R7, 1                       ; valor a somar à coluna do objeto, para o movimentar
+
+pacman_position:
+    MOV R1, START_LIN               ; linha inicial do pacman
+    MOV R2, START_COL               ; coluna inicial do pacman
+    MOV R4, DEFINE_PACMAN           ; endereço da tabela que define o pacman
+
+show_pacman:
+    CALL draw_object
+
 main: ; Ciclo principal
-    CALL keyboard ; Teclado
-    JMP main
+    CALL keyboard
+    CMP R0, 0
+    JNZ main
 
+; **********************************************************************
+; write_pixel - Escreve um pixel na linha e coluna indicadas.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R3 - cor do pixel (em formato ARGB de 16 bits)
+;
+; **********************************************************************
+write_pixel:
+	MOV  [DEFINE_LINE], R1		; seleciona a linha
+	MOV  [DEFINE_COLUMN], R2	; seleciona a coluna
+	MOV  [DEFINE_PIXEL], R3		; altera a cor do pixel na linha e coluna já selecionadas
+	RET
+
+; **********************************************************************
+; DRAW_OBJECT - Desenha o objeto na linha e coluna indicadas
+;			    com a forma e cor definidas na tabela indicada.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R4 - tabela que define o objeto
+;
+; **********************************************************************
+draw_object:
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+    MOV R5, [R4]    ; obtem altura do objeto 
+    ADD R4, 2       ; endereço da largura do objeto
+    MOV R6, [R4]    ; obtem largura do objeto
+    ADD R4, 2       ; endereço da cor do 1º pixel
+    MOV R8, R2      ; cria cópia do numero da coluna em que objeto vai ser desenhado
+    MOV R9, R6      ; cria cópia da largura do objeto 
+
+draw_rows:
+    MOV R7, R5      ; contador linhas que falta desenhar
+    draw_pixels:
+        MOV R3, [R4] ; obtém a cor do próximo pixel do objeto
+        CALL write_pixel ; escreve cada pixel do objeto
+        ADD R4, 2
+        ADD R2, 1
+        SUB R6, 1
+        JNZ draw_pixels
+    MOV R2, R8     ; reset valor coluna
+    MOV R6, R9     ; reset contador pixels que faltam desenhar numa coluna
+    ADD R1, 1
+    SUB R5, 1
+    JNZ draw_rows
+    POP R9
+    POP R8
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
+; **********************************************************************
+; DELETE_OBJECT - Apaga um objeto na linha e coluna indicadas
+;			  com a forma definida na tabela indicada.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R4 - tabela que define o objeto
+;
+; **********************************************************************
+delete_object:
+    PUSH R1
+	PUSH R2
+	PUSH R3
+	PUSH R4
+	PUSH R5
+    PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+    MOV R5, [R4]    ; obtem altura do objeto 
+    ADD R4, 2       ; endereço da largura do objeto
+    MOV R6, [R4]    ; obtem largura do objeto
+    ADD R4, 2       ; endereço da cor do 1º pixel
+    MOV R8, R2      ; cria cópia do numero da coluna em que objeto vai ser apagado
+    MOV R9, R6      ; cria cópia da largura do objeto 
+
+delete_rows:       	; desenha os pixels do objeto a partir da tabela
+    MOV R7, R5      ; contador linhas que falta apagar
+    delete_pixels:
+        MOV	R3, 0	       ; cor para apagar o próximo pixel do objeto
+        CALL write_pixel   ; escreve cada pixel do objeto
+        ADD	R4, 2		   ; endereço da cor do próximo pixel
+        ADD R2, 1          ; próxima coluna
+        SUB R7, 1		   ; menos uma coluna para tratar
+        JNZ delete_pixels  ; continua até percorrer toda a largura do objeto
+    MOV R2, R8     ; reset valor coluna
+    MOV R6, R9     ; reset contador pixels que faltam apagar numa coluna
+    ADD R1, 1
+    SUB R6, 1
+    JNZ delete_rows
+    POP R9
+    POP R8
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
+; **********************************************************************
+; KEYBOARD - ???
+; Argumentos:	????
+;
+; Retorna: 	????
+; **********************************************************************
 keyboard:
-    PUSH R1;
-    PUSH R2;
-    PUSH R3;
-    PUSH R4;
-    PUSH R5;
-    PUSH R6;
-    PUSH R7;
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
 
+    MOV R0, 0           ; Inicializa R0 para guardar a tecla pressionada
     MOV R2, TEC_L       ; Endereço do periférico das linhas do teclado
     MOV R3, TEC_C       ; Endereço do periférico das colunas do teclado
     MOV R4, DISPLAYS    ; Endereço do periférico dos displays
-    MOV R5, MASCARA_TEC ; Máscara para a leitura do teclado
+    MOV R5, MASK_TEC    ; Máscara para a leitura do teclado
 
     reset_line: 
         MOV R1, LINHA   ; define a linha a ler (inicialmente a 1)
@@ -75,28 +262,8 @@ keyboard:
         JNZ is_key_pressed ; Se não foi libertada, espera que seja
         JMP keyboard_end   ; Termina a rotina
 
-    convert_column:
-        PUSH R8
-        MOV R8, 0
-
-        cc_start:
-            CMP R0, 0
-            JZ cc_end
-            INC R8
-            SHR R0, 1
-            JNZ cc_start
-
-        cc_end:
-            DEC R8
-            MOV R0, R8
-            POP R8
-            RET
-
     keyboard_end:               ; Termina a rotina
         POP R0                  ; Recupera a coluna pressionada
-        CALL convert_column     ; Converte a coluna pressionada para valores de 0 a 3
-        SHL R7, 2               ; Multiplica o número da linha por 4
-        ADD R7, R0              ; Adiciona o número da coluna
         CALL keyboard_command   ; Executa o comando da tecla pressionada
 
     POP R7
