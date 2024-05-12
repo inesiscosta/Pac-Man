@@ -37,8 +37,7 @@ BOX_LIN                EQU  11         ; linha da caixa
 BOX_COL	               EQU  26         ; coluna da caixa
 
 GHOST_LIN              EQU  13         ; linha inicial do fantasma (a meio do ecrã)
-GHOST_COL_LEFT	       EQU  0          ; possível coluna inicial do fantasma (encostado ao limite esquerdo)
-GHOST_COL_RIGHT	       EQU  59         ; possível coluna inicial do fantasma (encostado ao limite direito 63(max) - 4(tamanho GHOST))
+GHOST_COL	           EQU  0          ; coluna inicial do fantasma (encostado ao limite esquerdo)
 
 MIN_COL		           EQU  0		   ; número da coluna mais à esquerda que o objeto pode ocupar
 MAX_COL		           EQU  63         ; número da coluna mais à direita que o objeto pode ocupar
@@ -289,36 +288,36 @@ keyboard:
 ; Retorna:      R11 - valor atualizado do contador
 ; *****************************************************************************************************************************
 keyboard_counter:
-    PUSH R1
+    PUSH R1                 ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R6
     PUSH R7
     PUSH R8
     PUSH R9
-    MOV R6, TEC_INCREMENTA
-    MOV R7, TEC_DECREMENTA
-    MOV R8, MAX_COUNTER     ; R8 = MAX_COUNTER
-    MOV R9, MIN_COUNTER     ; R9 = MIN_COUNTER
-    SHL R1, 4               ; Coloca linha nibble heigh
-    OR R1, R0               ; Juntamos a coluna (nibble low)
-    CMP R1, R6              ; Vemos se é a tecla que incrementa
-    JZ counter_increment    ; Incrementa o Contador
-    CMP R1, R7              ; Vemos se é a tecla que decrementa
-    JZ counter_decrement    ; Decrementa o Contador
-    JMP counter_end         ; Termina a Rotina
+    MOV R6, TEC_INCREMENTA  ; inicializa R6 com o endereço do display
+    MOV R7, TEC_DECREMENTA  ; inicializa R7 com o valor da tecla que incrementa o contador
+    MOV R8, MAX_COUNTER     ; inicializa R8 com o valor da tecla que decrementa o contador
+    MOV R9, MIN_COUNTER     ; inicializa R9 com o valor máximo do contador
+    SHL R1, 4               ; coloca linha nibble high
+    OR R1, R0               ; juntamos a coluna (nibble low)
+    CMP R1, R6              ; verificamos se é a tecla que incrementa
+    JZ counter_increment    ; incrementa o contador
+    CMP R1, R7              ; verificamos se é a tecla que decrementa
+    JZ counter_decrement    ; decrementa o contador
+    JMP counter_end         ; salta para o fim da rotina
     
     counter_increment:
-        CMP R11, R8
-        JZ counter_end
-        ADD R11, 1
-        MOV [R4], R11       ; Atualiza o display
-        JMP counter_end
+        CMP R11, R8         ; verifica se o contador está no maior valor possível
+        JZ counter_end      ; se sim, não incrementa e salta para o fim da rotina
+        ADD R11, 1          ; se não, incrementa o contador por 1 
+        MOV [R4], R11       ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
 
     counter_decrement:
-        CMP R11, R9
-        JZ counter_end
-        SUB R11, 1
-        MOV [R4], R11       ; Atualiza o display
-        JMP counter_end
+        CMP R11, R9         ; verifica se o contador está no mínimo valor possível
+        JZ counter_end      ; se sim, não decrementa e salta para o fim da rotina
+        SUB R11, 1          ; se não, decrementa o contador por 1 
+        MOV [R4], R11       ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
 
     counter_end:
         POP R9
