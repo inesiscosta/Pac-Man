@@ -12,16 +12,8 @@ DISPLAYS               EQU 0A000H      ;
 
 TEC_L                  EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
 TEC_C                  EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
-LINHA EQU 1
+LINHA                  EQU 1
 MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-;UP                    EQU  
-;DOWN                  EQU 
-;LEFT                  EQU 
-;RIGHT                 EQU 
-;UP_LEFT               EQU 
-;UP_RIGHT              EQU 
-;DOWN_LEFT             EQU 
-;DOWN_RIGHT            EQU 
 
 MIN_COUNTER            EQU 0
 MAX_COUNTER            EQU 100
@@ -293,7 +285,7 @@ keyboard:
         JZ next_line        ; Se não foi pressionada, passa para a próxima linha
         PUSH R0             ; Guarda a coluna pressionada
         MOV	R8, 0			; som com número 0
-	    MOV [TOCA_SOM], R8		; comando para tocar o som
+	    MOV [PLAY_SOUND], R8	; comando para tocar o som
         JMP is_key_pressed  ; caso contrário, espera que deixe de ser pressionada
 
     next_line:
