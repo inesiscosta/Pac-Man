@@ -20,7 +20,7 @@ TEC_DECREMENTA         EQU 81H         ; tecla que decrementa o contador
 
 INITIAL_COUNTER        EQU 0000H
 MIN_COUNTER            EQU 0           ; valor minimo do display (que o contador pode ter)
-MAX_COUNTER            EQU 100         ; valor máximo do display (que o contador pode ter)
+MAX_COUNTER            EQU 0100H       ; valor máximo do display (que o contador pode ter)
 
 DEFINE_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
 DEFINE_COLUMN   	   EQU 600CH       ; endereço do comando para definir a coluna
@@ -150,10 +150,11 @@ show_ghost:
 MOV R4, DISPLAYS                        ; guarda o endereço do periférico dos displays em R4
 MOV R11, INITIAL_COUNTER                ; inicializa o contador a 0
 MOV [R4], R11                           ; põe o valor do contador no display
+MOV R10, 0                              ; inicializa R10 a 0
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas
-    CMP R0, 0                           ; ????MARCOS???
+    CMP R0, 0                           
     JNZ main
 
 ; *****************************************************************************************************************************
@@ -308,15 +309,27 @@ keyboard_counter:
     counter_increment:
         CMP R11, R8         ; verifica se o contador está no maior valor possível
         JZ counter_end      ; se sim, não incrementa e salta para o fim da rotina
+        CMP R10, 7        
+        JNZ delay_i
+        MOV R10, 0
         ADD R11, 1          ; se não, incrementa o contador por 1 
         MOV [R4], R11       ; atualiza o display
+        JMP counter_end
+    delay_i:
+        ADD R10, 1          
         JMP counter_end     ; salta para o fim da rotina
 
     counter_decrement:
         CMP R11, R9         ; verifica se o contador está no mínimo valor possível
         JZ counter_end      ; se sim, não decrementa e salta para o fim da rotina
+        CMP R10, 7          
+        JNZ delay_d
+        MOV R10, 0
         SUB R11, 1          ; se não, decrementa o contador por 1 
         MOV [R4], R11       ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
+    delay_d:
+        ADD R10, 1        
         JMP counter_end     ; salta para o fim da rotina
 
     counter_end:
