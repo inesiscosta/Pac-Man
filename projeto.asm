@@ -14,7 +14,7 @@ TEC_L                  EQU 0C000H      ; endereço das linhas do teclado (perif�
 TEC_C                  EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
 LINHA EQU 1
 MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-;UP                    EQU 
+;UP                    EQU  
 ;DOWN                  EQU 
 ;LEFT                  EQU 
 ;RIGHT                 EQU 
@@ -34,11 +34,14 @@ DELETE_SCREEN	 	   EQU 6002H      ; endereço do comando para apagar todos os pi
 SELECT_BACKGROUND_IMG  EQU 6042H      ; endereço do comando para selecionar uma imagem de fundo
 PLAY_SOUND             EQU 605AH      ; endereço do comando para tocar som
 
-START_LIN              EQU  13        ; linha do pacman (a meio do ecrã)
-START_COL	           EQU  30        ; coluna do pacman (a meio do ecrã)
+START_LIN              EQU  13        ; linha do objeto (a meio do ecrã)
+START_COL	           EQU  30        ; coluna do objeto (a meio do ecrã)
 
-BOX_LIN                EQU  10        ; linha da caixa
-BOX_COL                EQU  16        ; coluna da caixa
+BOX_LIN                EQU  11        ; linha da caixa (a meio do ecrã)
+BOX_COL	               EQU  26        ; coluna da caixa (a meio do ecrã)
+
+GHOST_LIN              EQU  13        ; linha do fantasma (a meio do ecrã)
+GHOST_COL	           EQU  0         ; coluna do fantasma (encostado ao limite esquerdo)
 
 MIN_COL		           EQU  0		  ; número da coluna mais à esquerda que o objeto pode ocupar
 MAX_COL		           EQU  63        ; número da coluna mais à direita que o objeto pode ocupar
@@ -50,11 +53,11 @@ YELLOW_PIXEL           EQU 0FFF0H	  ; cor do pixel: amarelo em ARGB (opaco, verm
 
 GHOST_HEIGHT           EQU 4          ; altura fantasma
 GHOST_WIDTH		       EQU 4		  ; largura fantasma
-GREEN_PIXEL            EQU 00F0H	  ; cor do pixel: verde em ARGB (opaco e verde no máximo, vermelho e azul a 0)
+GREEN_PIXEL            EQU 0F0F0H	  ; cor do pixel: verde em ARGB (opaco e verde no máximo, vermelho e azul a 0)
 
 BOX_HEIGHT             EQU 8          ; altura caixa
 BOX_WIDTH		       EQU 12		  ; largura caixa
-BLUE_PIXEL             EQU 00F0H	  ; cor do pixel: azul em ARGB (opaco e azul no máximo, vermelho e verde a 0)
+BLUE_PIXEL             EQU 0F00FH	  ; cor do pixel: azul em ARGB (opaco e azul no máximo, vermelho e verde a 0)
 
 ; ***********************************************************************************************************************
 ; * Dados 
@@ -86,15 +89,14 @@ DEFINE_GHOST:   ;table que define o fantasma (altura, largura, pixels, cor)
 DEFINE_BOX:   ;table que define a caixa onde nasce o pacman (altura, largura, pixels, cor)
     WORD        BOX_HEIGHT
     WORD        BOX_WIDTH
-    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
-    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####       
-
+    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
+    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####   
 ; ***********************************************************************************************************************
 ; * Código
 ; ***********************************************************************************************************************
@@ -102,20 +104,25 @@ PLACE 0
 start:
     MOV SP, SP_initial
     MOV R0,0
-    MOV R1, BOX_LIN  
-    MOV R2, BOX_COL
-    MOV R3,0
-    MOV R4, DEFINE_BOX
-    MOV R5,0
-    MOV R6,0
+    MOV R1, 0
+    MOV R2, 0
+    MOV R3, 0
+    MOV R4, 0
+    MOV R5, 0
+    MOV R6, 0
     MOV R7, 1                       ; valor a somar à coluna do objeto, para o movimentar
-    MOV R8,0
-    MOV R9,0
-    MOV R10,0
-    MOV R11,0
+    MOV R8, 0
+    MOV R9, 0
+    MOV R10, 0
+    MOV R11, 0
     MOV [DELETE_WARNING], R0	    ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV [DELETE_SCREEN], R0	        ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
     MOV [SELECT_BACKGROUND_IMG], R0 ; seleciona o cenário de fundo        
+    
+box_position:
+    MOV R1, BOX_LIN               ; linha inicial da caixa
+    MOV R2, BOX_COL               ; coluna inicial da caixa
+    MOV R4, DEFINE_BOX           ; endereço da tabela que define o caixa     
     CALL draw_object
 
 pacman_position:
@@ -124,6 +131,14 @@ pacman_position:
     MOV R4, DEFINE_PACMAN           ; endereço da tabela que define o pacman
 
 show_pacman:
+    CALL draw_object
+
+ghost_position:
+    MOV R1, GHOST_LIN               ; linha inicial do ghost
+    MOV R2, GHOST_COL               ; coluna inicial do ghost
+    MOV R4, DEFINE_GHOST            ; endereço da tabela que define o ghost
+
+show_ghost:
     CALL draw_object
 
 main: ; Ciclo principal
@@ -258,6 +273,7 @@ keyboard:
     PUSH R5
     PUSH R6
     PUSH R7
+    PUSH R8
 
     MOV R0, 0           ; Inicializa R0 para guardar a tecla pressionada
     MOV R2, TEC_L       ; Endereço do periférico das linhas do teclado
@@ -276,6 +292,8 @@ keyboard:
         CMP R0, 0           ; Verifica se alguma tecla foi pressionada
         JZ next_line        ; Se não foi pressionada, passa para a próxima linha
         PUSH R0             ; Guarda a coluna pressionada
+        MOV	R8, 0			; som com número 0
+	    MOV [TOCA_SOM], R8		; comando para tocar o som
         JMP is_key_pressed  ; caso contrário, espera que deixe de ser pressionada
 
     next_line:
@@ -297,6 +315,7 @@ keyboard:
         POP R0                  ; Recupera a coluna pressionada
         CALL keyboard_command   ; Executa o comando da tecla pressionada
 
+    POP R8
     POP R7
     POP R6
     POP R5
