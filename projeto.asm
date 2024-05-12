@@ -37,7 +37,8 @@ BOX_LIN                EQU  11         ; linha da caixa
 BOX_COL	               EQU  26         ; coluna da caixa
 
 GHOST_LIN              EQU  13         ; linha inicial do fantasma (a meio do ecrã)
-GHOST_COL	           EQU  0          ; coluna inicial do fantasma (encostado ao limite esquerdo)
+GHOST_COL_LEFT	       EQU  0          ; possível coluna inicial do fantasma (encostado ao limite esquerdo)
+GHOST_COL_RIGHT	       EQU  59         ; possível coluna inicial do fantasma (encostado ao limite direito 63(max) - 4(tamanho GHOST))
 
 MIN_COL		           EQU  0		   ; número da coluna mais à esquerda que o objeto pode ocupar
 MAX_COL		           EQU  63         ; número da coluna mais à direita que o objeto pode ocupar
@@ -230,15 +231,17 @@ keyboard:
     PUSH R5
     PUSH R6
     PUSH R7
+    PUSH R8
 
     MOV R0, 0                   ; inicializa R0 para guardar a tecla pressionada
+    MOV R6, 0                   ; inicializa R6 para guardar no display ??????
     MOV R2, TEC_L               ; endereço do periférico das linhas do teclado
     MOV R3, TEC_C               ; endereço do periférico das colunas do teclado
     MOV R5, MASK_TEC            ; máscara para a leitura do teclado
 
     reset_line: 
         MOV R1, LINHA           ; define a linha a ler (inicialmente a 1)
-        MOV R6, 0               ; inicializa o contador de linhas a 0
+        MOV R7, 0               ; inicializa o contador de linhas a 0
 
     check_key:
         MOVB [R2], R1           ; ativa a linha para leitura do teclado
@@ -247,14 +250,14 @@ keyboard:
         CMP R0, 0               ; verifica se alguma tecla foi pressionada
         JZ next_line            ; se nenhuma tecla foi pressionada, passa para a próxima linha
         PUSH R0                 ; guarda a coluna pressionada
-        MOV	R7, 0			    ; som com número 0
-        MOV [PLAY_SOUND], R7    ; comando para tocar o som
+        MOV	R8, 0			    ; som com número 0
+        MOV [PLAY_SOUND], R8    ; comando para tocar o som
         JMP is_key_pressed      ; caso contrário, espera que a tecla deixe de ser pressionada
 
     next_line:
         SHL R1, 1               ; passa para a próxima linha do teclado
-        INC R6                  ; incrementa o contador de linhas
-        CMP R6, 4               ; verifica se já leu todas as linhas
+        INC R7                  ; incrementa o contador de linhas
+        CMP R7, 4               ; verifica se já leu todas as linhas
         JNZ check_key           ; se não leu todas as linhas, verifica a próxima
         JMP reset_line          ; caso contrário, volta para a 1ª linha
 
@@ -267,7 +270,8 @@ keyboard:
         JNZ is_key_pressed      ; se não foi libertada, espera que seja
 
     POP R0                      ; recupera a coluna pressionada
-    POP R7                      ; recupera os valores anteriores dos registos modificados
+    POP R8                      ; recupera os valores anteriores dos registos modificados
+    POP R7
     POP R6
     POP R5
     POP R4
@@ -285,42 +289,41 @@ keyboard:
 ; Retorna:      R11 - valor atualizado do contador
 ; *****************************************************************************************************************************
 keyboard_counter:
-    PUSH R1                 ; guarda os valores anteriores dos registos que são alterados nesta função
-    PUSH R2
-    PUSH R3
-    PUSH R4
-    PUSH R5
-    MOV R4, DISPLAYS        ; inicializa R4 com o endereço do display
-    MOV R2, TEC_INCREMENTA  ; inicializa R2 com o valor da tecla que incrementa o contador
-    MOV R3, TEC_DECREMENTA  ; inicializa R3 com o valor da tecla que decrementa o contador
-    MOV R4, MAX_COUNTER     ; inicializa R4 com o valor máximo do contador
-    MOV R5, MIN_COUNTER     ; inicializa R5 com o valor mínimo do contador
-    SHL R1, 4               ; coloca linha nibble high
-    OR R1, R0               ; juntamos a coluna (nibble low)
-    CMP R1, R6              ; verificamos se é a tecla que incrementa
-    JZ counter_increment    ; incrementa o contador
-    CMP R1, R3              ; verificamos se é a tecla que decrementa
-    JZ counter_decrement    ; decrementa o contador
-    JMP counter_end         ; salta para o fim da rotina
+    PUSH R1
+    PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+    MOV R6, TEC_INCREMENTA
+    MOV R7, TEC_DECREMENTA
+    MOV R8, MAX_COUNTER     ; R8 = MAX_COUNTER
+    MOV R9, MIN_COUNTER     ; R9 = MIN_COUNTER
+    SHL R1, 4               ; Coloca linha nibble heigh
+    OR R1, R0               ; Juntamos a coluna (nibble low)
+    CMP R1, R6              ; Vemos se é a tecla que incrementa
+    JZ counter_increment    ; Incrementa o Contador
+    CMP R1, R7              ; Vemos se é a tecla que decrementa
+    JZ counter_decrement    ; Decrementa o Contador
+    JMP counter_end         ; Termina a Rotina
     
     counter_increment:
-        CMP R11, R4         ; verifica se o contador está no maior valor possível
-        JZ counter_end      ; se sim, não incrementa e salta para o fim da rotina
-        ADD R11, 1          ; se não, incrementa o contador por 1 
-        MOV [R4], R11       ; atualiza o display
-        JMP counter_end     ; salta para o fim da rotina
+        CMP R11, R8
+        JZ counter_end
+        ADD R11, 1
+        MOV [R4], R11       ; Atualiza o display
+        JMP counter_end
 
     counter_decrement:
-        CMP R11, R5         ; verifica se o contador está no mínimo valor possível
-        JZ counter_end      ; se sim, não decrementa e salta para o fim da rotina
-        SUB R11, 1          ; se não, decrementa o contador por 1 
-        MOV [R4], R11       ; atualiza o display
-        JMP counter_end     ; salta para o fim da rotina
+        CMP R11, R9
+        JZ counter_end
+        SUB R11, 1
+        MOV [R4], R11       ; Atualiza o display
+        JMP counter_end
 
     counter_end:
-        POP R5              ; recupera os valores anteriores dos registos modificados
-        POP R4
-        POP R3
-        POP R2
+        POP R9
+        POP R8
+        POP R7
+        POP R6
         POP R1
         RET
