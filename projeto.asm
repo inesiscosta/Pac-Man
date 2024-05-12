@@ -34,16 +34,27 @@ DELETE_SCREEN	 	   EQU 6002H      ; endereço do comando para apagar todos os pi
 SELECT_BACKGROUND_IMG  EQU 6042H      ; endereço do comando para selecionar uma imagem de fundo
 PLAY_SOUND             EQU 605AH      ; endereço do comando para tocar som
 
-START_LIN              EQU  13        ; linha do objeto (a meio do ecrã)
-START_COL	           EQU  30        ; coluna do objeto (a meio do ecrã)
+START_LIN              EQU  13        ; linha do pacman (a meio do ecrã)
+START_COL	           EQU  30        ; coluna do pacman (a meio do ecrã)
+
+BOX_LIN                EQU  10        ; linha da caixa
+BOX_COL                EQU  16        ; coluna da caixa
 
 MIN_COL		           EQU  0		  ; número da coluna mais à esquerda que o objeto pode ocupar
 MAX_COL		           EQU  63        ; número da coluna mais à direita que o objeto pode ocupar
 DELAY		           EQU	400H	  ; atraso para limitar a velocidade de movimento do objeto
 
-HEIGHT                 EQU 5          ; altura pacman
-WIDTH		           EQU 4		  ; largura pacman
+PAC_HEIGHT             EQU 5          ; altura pacman
+PAC_WIDTH		       EQU 4		  ; largura pacman
 YELLOW_PIXEL           EQU 0FFF0H	  ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
+
+GHOST_HEIGHT           EQU 4          ; altura fantasma
+GHOST_WIDTH		       EQU 4		  ; largura fantasma
+GREEN_PIXEL            EQU 00F0H	  ; cor do pixel: verde em ARGB (opaco e verde no máximo, vermelho e azul a 0)
+
+BOX_HEIGHT             EQU 8          ; altura caixa
+BOX_WIDTH		       EQU 12		  ; largura caixa
+BLUE_PIXEL             EQU 00F0H	  ; cor do pixel: azul em ARGB (opaco e azul no máximo, vermelho e verde a 0)
 
 ; ***********************************************************************************************************************
 ; * Dados 
@@ -55,14 +66,34 @@ pilha:
 
 SP_initial:
 
-DEFINE_PACMAN:  ; tabela que define o objeto (cor, largura, pixels)
-    WORD        HEIGHT
-    WORD        WIDTH
+DEFINE_PACMAN:  ; tabela que define o pacman (altura, largura, pixels, cor)
+    WORD        PAC_HEIGHT
+    WORD        PAC_WIDTH
 	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
     WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
     WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
     WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; #### 
 	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
+
+DEFINE_GHOST:   ;table que define o fantasma (altura, largura, pixels, cor)
+    WORD        GHOST_HEIGHT
+    WORD        GHOST_WIDTH
+    WORD        0, GREEN_PIXEL, GREEN_PIXEL, 0                              ;  ## 
+    WORD        GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL          ; ####
+    WORD        GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL          ; ####
+    WORD        GREEN_PIXEL, 0, 0, GREEN_PIXEL                              ; #  #
+
+DEFINE_BOX:   ;table que define a caixa onde nasce o pacman (altura, largura, pixels, cor)
+    WORD        BOX_HEIGHT
+    WORD        BOX_WIDTH
+    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
+    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                ; #          #
+    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####       
 
 ; ***********************************************************************************************************************
 ; * Código
@@ -71,21 +102,21 @@ PLACE 0
 start:
     MOV SP, SP_initial
     MOV R0,0
-    MOV R1,0
-    MOV R2,0
+    MOV R1, BOX_LIN  
+    MOV R2, BOX_COL
     MOV R3,0
-    MOV R4,0
+    MOV R4, DEFINE_BOX
     MOV R5,0
     MOV R6,0
-    MOV R7,0
+    MOV R7, 1                       ; valor a somar à coluna do objeto, para o movimentar
     MOV R8,0
     MOV R9,0
     MOV R10,0
     MOV R11,0
-    MOV  [DELETE_WARNING], R1	    ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-    MOV  [DELETE_SCREEN], R1	    ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV [SELECT_BACKGROUND_IMG], R1 ; seleciona o cenário de fundo
-    MOV R7, 1                       ; valor a somar à coluna do objeto, para o movimentar
+    MOV [DELETE_WARNING], R0	    ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV [DELETE_SCREEN], R0	        ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV [SELECT_BACKGROUND_IMG], R0 ; seleciona o cenário de fundo        
+    CALL draw_object
 
 pacman_position:
     MOV R1, START_LIN               ; linha inicial do pacman
