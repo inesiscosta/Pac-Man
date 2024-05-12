@@ -18,7 +18,7 @@ MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao
 TEC_INCREMENTA         EQU 82H         ; tecla que incrementa o contador
 TEC_DECREMENTA         EQU 81H         ; tecla que decrementa o contador
 
-INITIAL_COUNTER        EQU 0000H
+INITIAL_COUNTER        EQU 0000H       ; valor inicial do contador
 MIN_COUNTER            EQU 0           ; valor minimo do display (que o contador pode ter)
 MAX_COUNTER            EQU 0100H       ; valor máximo do display (que o contador pode ter)
 
@@ -309,27 +309,27 @@ keyboard_counter:
     counter_increment:
         CMP R11, R8         ; verifica se o contador está no maior valor possível
         JZ counter_end      ; se sim, não incrementa e salta para o fim da rotina
-        CMP R10, 7        
-        JNZ delay_i
-        MOV R10, 0
+        CMP R10, 7          ; compara R10 com 7 (assim só de 7 em 7 é que o counter avança)
+        JNZ delay_i         ; se R10 não for 7 salta para delay_i
+        MOV R10, 0          ; reinicializa R10
         ADD R11, 1          ; se não, incrementa o contador por 1 
         MOV [R4], R11       ; atualiza o display
-        JMP counter_end
+        JMP counter_end     ; salta para o fim da rotina
     delay_i:
-        ADD R10, 1          
+        ADD R10, 1          ; incrementa R10 por 1
         JMP counter_end     ; salta para o fim da rotina
 
     counter_decrement:
         CMP R11, R9         ; verifica se o contador está no mínimo valor possível
         JZ counter_end      ; se sim, não decrementa e salta para o fim da rotina
-        CMP R10, 7          
-        JNZ delay_d
-        MOV R10, 0
+        CMP R10, 7          ; compara R10 com 7 (assim só de 7 em 7 é que o counter desçe)
+        JNZ delay_d         ; se R10 não for 7 salta para delay_d
+        MOV R10, 0          ; reinicializa R10
         SUB R11, 1          ; se não, decrementa o contador por 1 
         MOV [R4], R11       ; atualiza o display
         JMP counter_end     ; salta para o fim da rotina
     delay_d:
-        ADD R10, 1        
+        ADD R10, 1          ; incrementa R10 por 1
         JMP counter_end     ; salta para o fim da rotina
 
     counter_end:
