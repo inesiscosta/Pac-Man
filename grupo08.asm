@@ -9,7 +9,7 @@
 ; *****************************************************************************************************************************
 ; * Constantes
 ; *****************************************************************************************************************************
-DISPLAYS               EQU 0A000H      ; endereço dos displays (periférico POUT-1)
+DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 
 TEC_L                  EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
 TEC_C                  EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
@@ -48,11 +48,19 @@ YELLOW_PIXEL           EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, ver
 
 GHOST_HEIGHT           EQU 4           ; altura do fantasma
 GHOST_WIDTH		       EQU 4		   ; largura do fantasma
-GREEN_PIXEL            EQU 0F0F0H	   ; cor do pixel: verde em ARGB (opaco e verde no máximo, vermelho e azul a 0)
+GREEN_PIXEL            EQU 0F0A5H	   ; cor do pixel: verde em ARGB (opaco no máximo, verde a 10, azul a 5 e vermelho a 0)
+
+CANDY_HEIGHT           EQU 4           ; altura do rebuçado
+CANDY_WIDTH            EQU 4           ; largura do rebuçado
+RED_PIXEL              EQU 0FF00H      ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+
+EXPLOSION_HEIGHT       EQU 5           ; altura da explosão
+EXPLOSION_WIDTH        EQU 5           ; largura da explosão
+CYAN_PIXEL             EQU 0F4FFH      ; cor do pixel: ciano em ARGB (opaco, verde e azul no máximo, vermelho a 4)
 
 BOX_HEIGHT             EQU 8           ; altura da caixa
 BOX_WIDTH		       EQU 12		   ; largura da caixa
-BLUE_PIXEL             EQU 0F00FH	   ; cor do pixel: azul em ARGB (opaco e azul no máximo, vermelho e verde a 0)
+BLUE_PIXEL             EQU 0F469H	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
 
 ; *****************************************************************************************************************************
 ; * Dados 
@@ -90,6 +98,23 @@ DEFINE_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
     WORD        GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL          ; ####
     WORD        GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL          ; ####
     WORD        GREEN_PIXEL, 0, 0, GREEN_PIXEL                              ; #  #
+
+DEFINE_CANDY:   ; tabela que define o rebuçado (altura, largura, pixels, cor)
+    WORD        CANDY_HEIGHT
+    WORD        CANDY_WIDTH
+    WORD        0, 0, 0, RED_PIXEL                                          ;    #
+    WORD        0, RED_PIXEL, RED_PIXEL, 0                                  ;  ## 
+    WORD        0, RED_PIXEL, RED_PIXEL, 0                                  ;  ##
+    WORD        RED_PIXEL, 0, 0, 0                                          ; #
+
+DEFINE_EXPLOSION:   ; tabela que define a explosão (altura, largura, pixels, cor)
+    WORD        EXPLOSION_HEIGHT
+    WORD        EXPLOSION_WIDTH
+    WORD        CYAN_PIXEL, 0, 0, 0, CYAN_PIXEL                              ; #   #
+    WORD        0, CYAN_PIXEL, 0, CYAN_PIXEL, 0                              ;  # # 
+    WORD        0, 0, CYAN_PIXEL, 0, 0                                       ;   #  
+    WORD        0, CYAN_PIXEL, 0, CYAN_PIXEL, 0                              ;  # # 
+    WORD        CYAN_PIXEL, 0, 0, 0, CYAN_PIXEL                              ; #   #
 
 DEFINE_BOX:     ; tabela que define a caixa onde nasce o pacman (altura, largura, pixels, cor)
     WORD        BOX_HEIGHT
