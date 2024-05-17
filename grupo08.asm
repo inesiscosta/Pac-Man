@@ -20,7 +20,9 @@ TEC_DECREMENTA         EQU 81H         ; tecla que decrementa o contador
 
 INITIAL_COUNTER        EQU 0000H       ; valor inicial do contador
 MIN_COUNTER            EQU 0           ; valor minimo do display (que o contador pode ter)
-MAX_COUNTER            EQU 0100H       ; valor máximo do display (que o contador pode ter)
+MAX_COUNTER            EQU 100H        ; valor máximo do display (que o contador pode ter)
+MASK_LSD               EQU 0FH         ; máscara para isolar os 4 btis de menor peso para ver o digito menos significativo
+MASK_TENS              EQU 0F0H        ; máscara para isolar os bits que representam as dezenas
 
 DEFINE_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
 DEFINE_COLUMN   	   EQU 600CH       ; endereço do comando para definir a coluna
@@ -314,6 +316,9 @@ keyboard:
 ; *****************************************************************************************************************************
 keyboard_counter:
     PUSH R1                 ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R2
+    PUSH R3
+    PUSH R4
     PUSH R5
     PUSH R6
     PUSH R7
@@ -338,31 +343,81 @@ keyboard_counter:
         CMP R10, R5         ; compara R10 com R5
         JNZ delay_i         ; se R10 não for igual a R5 salta para delay_i
         MOV R10, 0          ; reinicializa R10
-        ADD R11, 1          ; se não, incrementa o contador por 1 
-        MOV [R4], R11       ; atualiza o display
+        ADD R11, 1          ; se não, incrementa o contador por 1
+        MOV R3, MASK_LSD    ; copia a máscara das unidades para R3
+        MOV R4, R11         ; copia valor do contador para R4
+        AND R4, R3          ; máscara para ter o digito menos significativo de R4
+        MOV R2, 0AH         ; copia para R2 o valor hexadecimal A 
+        CMP R4, R2          ; verifica se o digito menos significativo é 10 (hex 'A')
+        JZ salta_hexa_inc   ; se sim salta para salta_hexa que irá saltar à frente os valores A-F
+        MOV [DISPLAYS], R11 ; se não, atualiza o display
         JMP counter_end     ; salta para o fim da rotina
     delay_i:
         ADD R10, 1          ; incrementa R10 por 1
         JMP counter_end     ; salta para o fim da rotina
+    
+    salta_hexa_inc:
+        ADD R11, 6          ; adiciona 6 ao contador para saltar os valores de A - F
+        MOV R3, MASK_TENS   ; copia a máscara das dezenas para R3
+        MOV R4, R11         ; copia o valor do contador para R4
+        AND R4, R3          ; aplica a máscara das dezenas
+        MOV R2, 0A0H        ; copia para R2 o valor hexadecimal 0A0H
+        CMP R4, R2          ; verifica se as dezenas estão a A
+        JZ salta_max_inc    ; se sim salta para salta_mac_inc que irá incrementar para 256H que mostra 100 nos displays
+        MOV [DISPLAYS], R11 ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
+
+    salta_max_inc:
+        MOV R3, 96          ; copia 96 para R3
+        ADD R11, R3         ; adiciona o valor de R3(96) a R11
+        MOV [DISPLAYS], R11 ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
 
     counter_decrement:
-        CMP R11, R9         ; verifica se o contador está no mínimo valor possível
+        CMP R11, R9         ; verifica se o contador está no valor mínimo
         JZ counter_end      ; se sim, não decrementa e salta para o fim da rotina
         CMP R10, R5         ; compara R10 com R5
-        JNZ delay_d         ; se R10 não for igual a R5 salta para delay_d
+        JNZ delay_d         ; se R10 não for igual a R5, salta para delay_d
         MOV R10, 0          ; reinicializa R10
-        SUB R11, 1          ; se não, decrementa o contador por 1 
-        MOV [R4], R11       ; atualiza o display
+        SUB R11, 1          ; se não, decrementa o contador por 1
+        MOV R3, MASK_LSD    ; copia a máscara para R3
+        MOV R4, R11         ; copia o valor do contador para R4
+        AND R4, R3          ; aplica a máscara para isolar o dígito menos significativo
+        MOV R2, 0FH         ; copia para R2 o valor hexadecimal F 
+        CMP R4, R2          ; verifica se o dígito menos significativo é 10 (hex 'F')
+        JZ salta_hexa_dec   ; se sim, salta os valores F-A
+        MOV [DISPLAYS], R11 ; atualiza o display
         JMP counter_end     ; salta para o fim da rotina
+    
     delay_d:
         ADD R10, 1          ; incrementa R10 por 1
         JMP counter_end     ; salta para o fim da rotina
 
+    salta_hexa_dec:
+        SUB R11, 6          ; subtrai 7 ao contador para saltar os valores de F-A
+        MOV R3, MASK_TENS   ; copia a máscara das dezenas para R3
+        MOV R4, R11         ; copia o valor do contador para R4
+        AND R4, R3          ; aplica a máscara das dezenas
+        MOV R2, 0F0H        ; copia para R2 o valor hexadecimal 0A0H
+        CMP R4, R2          ; verifica se as dezenas estão a A
+        JZ salta_max_dec    ; se sim salta para salta_mac_inc que irá decrementar para 99H
+        MOV [DISPLAYS], R11 ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
+
+    salta_max_dec:
+        MOV R3, 96          ; copia 96 para R3
+        SUB R11, R3         ; subtrai o valor de R3(96) a R11
+        MOV [DISPLAYS], R11 ; atualiza o display
+        JMP counter_end     ; salta para o fim da rotina
+
     counter_end:
-        POP R9
+        POP R9              ; recupera os valores anteriores dos registos modificados
         POP R8
         POP R7
         POP R6
         POP R5
+        POP R4
+        POP R3
+        POP R2
         POP R1
         RET
