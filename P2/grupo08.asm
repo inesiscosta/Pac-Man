@@ -9,8 +9,25 @@
 ; *****************************************************************************************************************************
 ; * Constantes
 ; *****************************************************************************************************************************
+TRUE                   EQU 1           ; valor numérico para representar TRUE (1)
+FALSE                  EQU 0           ; valor numérico para representar FALSE (0)
+DELAY                  EQU 3000H       ; numero de ciclos de delay para atrasar o movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 
+; MediaCenter
+DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
+DEF_COLUMN   	       EQU 600CH       ; endereço do comando para definir a coluna
+DEF_PIXEL    	       EQU 6012H       ; endereço do comando para escrever um pixel
+DELETE_WARNING     	   EQU 6040H       ; endereço do comando para apagar o aviso de nenhum cenário selecionado
+DELETE_SCREEN	 	   EQU 6002H       ; endereço do comando para apagar todos os pixels já desenhados
+SELECT_BACKGROUND_IMG  EQU 6042H       ; endereço do comando para selecionar uma imagem de fundo
+PLAY_SOUND             EQU 605AH       ; endereço do comando para tocar som
+LOOP_PLAY_SOUND        EQU 605CH       ; endereço do comando para reproduzir o som ou video especificado em ciclo
+PAUSE_SOUND            EQU 605EH       ; endereço do comando para pausar a reprodução do som ou video especificado
+RESUME_SOUND           EQU 6006H       ; endereço do comando para resumir a reprodução do som ou video especificado
+STOP_SOUND             EQU 6066H       ; endereço do comando para terminar a reprodução do som ou video especificado
+
+; Controlos
 UP_LEFT_KEY            EQU 11H         ; key 0 for moving up and left
 UP_KEY                 EQU 12H         ; key 1 for moving up
 UP_RIGHT_KEY           EQU 14H         ; key 2 for moving up and right
@@ -20,66 +37,48 @@ DOWN_LEFT_KEY          EQU 41H         ; key 8 for moving down and left
 DOWN__KEY              EQU 42H         ; key 9 for moving down
 DOWN_RIGHT_KEY         EQU 44H         ; key A for moving down and right
 
-TEC_L                  EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
-TEC_C                  EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
-LINHA                  EQU 1           ; inicialização da linha
+; Teclado
+KEY_LIN                EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
+KEY_COL                EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
+KEY_START_LINE         EQU 1           ; inicialização da linha
 MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-TEC_INCREMENTA         EQU 82H         ; tecla que incrementa o contador
-TEC_DECREMENTA         EQU 81H         ; tecla que decrementa o contador
 
-INITIAL_COUNTER        EQU 0000H       ; valor inicial do contador
-MIN_COUNTER            EQU 0           ; valor minimo do display (que o contador pode ter)
-MAX_COUNTER            EQU 100H        ; valor máximo do display (que o contador pode ter)
+; Contador
 MASK_LSD               EQU 0FH         ; máscara para isolar os 4 btis de menor peso para ver o digito menos significativo
 MASK_TENS              EQU 0F0H        ; máscara para isolar os bits que representam as dezenas
 
-DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
-DEF_COLUMN   	       EQU 600CH       ; endereço do comando para definir a coluna
-DEF_PIXEL    	       EQU 6012H       ; endereço do comando para escrever um pixel
-DELETE_WARNING     	   EQU 6040H       ; endereço do comando para apagar o aviso de nenhum cenário selecionado
-DELETE_SCREEN	 	   EQU 6002H       ; endereço do comando para apagar todos os pixels já desenhados
-SELECT_BACKGROUND_IMG  EQU 6042H       ; endereço do comando para selecionar uma imagem de fundo
-PLAY_SOUND             EQU 605AH       ; endereço do comando para tocar som
-
-START_LIN              EQU  13         ; linha inicial do pacman (a meio do ecrã)
-START_COL	           EQU  30         ; coluna inicial do pacman (a meio do ecrã)
-
+; Posições Iniciais
+PAC_LIN                EQU  13         ; linha inicial do pacman (a meio do ecrã)
+PAC_COL	               EQU  30         ; coluna inicial do pacman (a meio do ecrã)
+GHOST_LIN              EQU  13         ; linha inicial do fantasma (a meio do ecrã)
+GHOST_COL	           EQU  0          ; coluna inicial do fantasma (encostado ao limite esquerdo)
 BOX_LIN                EQU  11         ; linha da caixa
 BOX_COL	               EQU  26         ; coluna da caixa
 
-GHOST_LIN              EQU  13         ; linha inicial do fantasma (a meio do ecrã)
-GHOST_COL	           EQU  0          ; coluna inicial do fantasma (encostado ao limite esquerdo)
+; Cores
+YLW                    EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
+GRN                    EQU 0F0A5H	   ; cor do pixel: verde em ARGB (opaco no máximo, verde a 10, azul a 5 e vermelho a 0)
+RED                    EQU 0FF00H      ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+CYAN                   EQU 0F4FFH      ; cor do pixel: ciano em ARGB (opaco, verde e azul no máximo, vermelho a 4)
+BLUE                   EQU 0F469H	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
 
+; Medidas
 PAC_HEIGHT             EQU 5           ; altura do pacman
 PAC_WIDTH		       EQU 5		   ; largura do pacman
-YLW                    EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
-
 GHOST_HEIGHT           EQU 4           ; altura do fantasma
 GHOST_WIDTH		       EQU 4		   ; largura do fantasma
-GRN                    EQU 0F0A5H	   ; cor do pixel: verde em ARGB (opaco no máximo, verde a 10, azul a 5 e vermelho a 0)
-
 CANDY_HEIGHT           EQU 4           ; altura do rebuçado
 CANDY_WIDTH            EQU 4           ; largura do rebuçado
-RED_PIXEL              EQU 0FF00H      ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-
 EXPLOSION_HEIGHT       EQU 5           ; altura da explosão
 EXPLOSION_WIDTH        EQU 5           ; largura da explosão
-CYN                    EQU 0F4FFH      ; cor do pixel: ciano em ARGB (opaco, verde e azul no máximo, vermelho a 4)
-
 BOX_HEIGHT             EQU 8           ; altura da caixa
 BOX_WIDTH		       EQU 12		   ; largura da caixa
-BLU                    EQU 0F469H	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
 
-MAX_LIN EQU 31
-MIN_LIN EQU 1
-
-MAX_COL EQU 63
-MIN_COL EQU 1
-
-DELAY_COUNT            EQU 3000H
-
-TRUE EQU 1
-FALSE EQU 0
+; Limites
+MIN_LIN                EQU 1           ; linha limite mínimo do ecrã
+MAX_LIN                EQU 31          ; linha limite máximo do ecrã
+MIN_COL                EQU 1           ; coluna limite máximo do ecrã
+MAX_COL                EQU 63          ; coluna limite mínimo do ecrã
 
 ; *****************************************************************************************************************************
 ; * Dados 
@@ -92,53 +91,52 @@ pilha:
 SP_initial:     ; este é o endereço (1200H) com que o SP deve ser inicializado.
                 ; O 1.º end. de retorno será armazenado em 11FEH (1200H-2)
 
-DEF_PACMAN:  ; tabela que define o pacman (altura, largura, pixels, cor)
+DEF_PACMAN:     ; tabela que define o pacman (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-	WORD		0, YLW, YLW, YLW, 0	                        ;  ### 
-    WORD		YLW, YLW, YLW, YLW, YLW	                    ; #####   
-    WORD		YLW, YLW, YLW, YLW, YLW		                ; #####   
-    WORD		YLW, YLW, YLW, YLW, YLW		                ; ##### 
-	WORD		0, YLW, YLW, YLW, 0	                        ;  ### 
-
-DEF_OPEN_PACMAN_LEFT:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
-    WORD        PAC_HEIGHT
-    WORD        PAC_WIDTH
+	WORD		0, YLW, YLW, YLW, 0                     ;  ### 
+    WORD		YLW, YLW, YLW, YLW, YLW	                ; #####   
+    WORD		YLW, YLW, YLW, YLW, YLW		            ; #####   
+    WORD		YLW, YLW, YLW, YLW, YLW		            ; ##### 
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ### 
-    WORD		0, 0, YLW, YLW, YLW	                    ;   ###
-    WORD		0, 0, 0, YLW, YLW		                ;    ##
-    WORD		0, 0, YLW, YLW, YLW		                ;   ###
-	WORD		0, YLW, YLW, YLW, 0	                    ;  ###
 
-
-DEF_OPEN_PACMAN_RIGHT:  ; tabela que define o pacman com a boca aberta para a direita (altura, largura, pixels, cor)
+DEF_OPEN_PAC_LEFT:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-	WORD		0, YLW, YLW, YLW, 0	                    ;  ### 
-    WORD		YLW, YLW, YLW, 0, 0	                    ; ###   
-    WORD		YLW, YLW, 0, 0, 0		                ; ##
-    WORD		YLW, YLW, YLW, 0, 0		                ; ### 
-	WORD		0, YLW, YLW, YLW, 0	                    ;  ###
+	WORD		YLW, YLW, YLW, 0, 0	                    ; ### 
+    WORD		0, YLW, YLW, YLW, 0	                    ;  ###
+    WORD		0, 0, YLW, YLW, 0		                ;   ##
+    WORD		0, YLW, YLW, YLW, 0		                ;  ###
+	WORD		YLW, YLW, YLW, 0, 0	                    ; ###
 
-DEF_OPEN_PACMAN_UP:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
+DEF_OPEN_PAC_RIGHT:  ; tabela que define o pacman com a boca aberta para a direita (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-	WORD		0, 0, 0, 0, 0	                        ;
+	WORD		0, 0, YLW, YLW, YLW	                    ;  ### 
+    WORD		0, YLW, YLW, YLW, 0	                    ; ###   
+    WORD		0, YLW, YLW, 0, 0		                ; ##
+    WORD		0, YLW, YLW, YLW, 0		                ; ### 
+	WORD		0, 0, YLW, YLW, YLW	                    ;  ###
+
+DEF_OPEN_PAC_UP:  ; tabela que define o pacman com a boca aberta para cima (altura, largura, pixels, cor)
+    WORD        PAC_HEIGHT
+    WORD        PAC_WIDTH
     WORD		YLW, 0, 0, 0, YLW	                    ; #   #   
     WORD		YLW, YLW, 0, YLW, YLW		            ; ## ##
     WORD		YLW, YLW, YLW, YLW, YLW		            ; ##### 
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ###
+	WORD		0, 0, 0, 0, 0	                        ;
 
-DEF_OPEN_PACMAN_DOWN:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
+DEF_OPEN_PAC_DOWN:  ; tabela que define o pacman com a boca aberta para baixo (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
+	WORD		0, 0, 0, 0, 0	                        ; 
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ###
     WORD		YLW, YLW, YLW, YLW, YLW		            ; ##### 
     WORD		YLW, YLW, 0, YLW, YLW		            ; ## ## 
     WORD		YLW, 0, 0, 0, YLW	                    ; #   # 
-	WORD		0, 0, 0, 0, 0	                        ; 
 
-DEF_OPEN_PACMAN_UP_LEFT:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
+DEF_OPEN_PAC_UP_LEFT:  ; tabela que define o pacman com a boca aberta para cima e para a esquerda (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
 	WORD		0, 0, YLW, YLW, 0	                    ;   ##
@@ -147,7 +145,7 @@ DEF_OPEN_PACMAN_UP_LEFT:  ; tabela que define o pacman com a boca aberta para a 
     WORD		YLW, YLW, YLW, YLW, YLW	                ; ##### 
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ### 
 
-DEF_OPEN_PACMAN_UP_RIGHT:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
+DEF_OPEN_PAC_UP_RIGHT:  ; tabela que define o pacman com a boca aberta para cima e para a direita (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
 	WORD		0, YLW, YLW, 0, 0	                    ;   ##
@@ -156,7 +154,7 @@ DEF_OPEN_PACMAN_UP_RIGHT:  ; tabela que define o pacman com a boca aberta para a
     WORD		YLW, YLW, YLW, YLW, YLW	                ; ##### 
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ### 
 
-DEF_OPEN_PACMAN_DOWN_LEFT:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
+DEF_OPEN_PAC_DOWN_LEFT:  ; tabela que define o pacman com a boca aberta para baixo e para a esquerda (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ###
@@ -165,7 +163,7 @@ DEF_OPEN_PACMAN_DOWN_LEFT:  ; tabela que define o pacman com a boca aberta para 
     WORD		0, 0, 0, YLW, YLW		                ;    ##  
 	WORD		0, 0, YLW, YLW, 0	                    ;   ##
 
-DEF_OPEN_PACMAN_DOWN_RIGHT:  ; tabela que define o pacman com a boca aberta para a esquerda (altura, largura, pixels, cor)
+DEF_OPEN_PAC_DOWN_RIGHT:  ; tabela que define o pacman com a boca aberta para baixo e para a direita (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
 	WORD		0, YLW, YLW, YLW, 0	                    ;  ### 
@@ -185,31 +183,31 @@ DEF_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
 DEF_CANDY:   ; tabela que define o rebuçado (altura, largura, pixels, cor)
     WORD        CANDY_HEIGHT
     WORD        CANDY_WIDTH
-    WORD        0, 0, 0, RED_PIXEL                      ;    #
-    WORD        0, RED_PIXEL, RED_PIXEL, 0              ;  ## 
-    WORD        0, RED_PIXEL, RED_PIXEL, 0              ;  ##
-    WORD        RED_PIXEL, 0, 0, 0                      ; #
+    WORD        0, 0, 0, RED                            ;    #
+    WORD        0, RED, RED, 0                          ;  ## 
+    WORD        0, RED, RED, 0                          ;  ##
+    WORD        RED, 0, 0, 0                            ; #
 
 DEF_EXPLOSION:   ; tabela que define a explosão (altura, largura, pixels, cor)
     WORD        EXPLOSION_HEIGHT
     WORD        EXPLOSION_WIDTH
-    WORD        CYN, 0, 0, 0, CYN                       ; #   #
-    WORD        0, CYN, 0, CYN, 0                       ;  # # 
-    WORD        0, 0, CYN, 0, 0                         ;   #  
-    WORD        0, CYN, 0, CYN, 0                       ;  # # 
-    WORD        CYN, 0, 0, 0, CYN                       ; #   #
+    WORD        CYAN, 0, 0, 0, CYAN                     ; #   #
+    WORD        0, CYAN, 0, CYAN, 0                     ;  # # 
+    WORD        0, 0, CYAN, 0, 0                        ;   #  
+    WORD        0, CYAN, 0, CYAN, 0                     ;  # # 
+    WORD        CYAN, 0, 0, 0, CYAN                     ; #   #
 
 DEF_BOX:     ; tabela que define a caixa onde nasce o pacman (altura, largura, pixels, cor)
     WORD        BOX_HEIGHT
     WORD        BOX_WIDTH
-    WORD        BLU, BLU, BLU, BLU, 0, 0, 0, 0, BLU, BLU, BLU, BLU      ; ####    ####
-    WORD        BLU, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLU                  ; #          #
-    WORD        BLU, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLU                  ; #          #
-    WORD        BLU, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLU                  ; #          #
-    WORD        BLU, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLU                  ; #          #
-    WORD        BLU, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLU                  ; #          #
-    WORD        BLU, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLU                  ; #          #
-    WORD        BLU, BLU, BLU, BLU, 0, 0, 0, 0, BLU, BLU, BLU, BLU      ; ####    ####   
+    WORD        BLUE, BLUE, BLUE, BLUE, 0, 0, 0, 0, BLUE, BLUE, BLUE, BLUE      ; ####    ####
+    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
+    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
+    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
+    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
+    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
+    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
+    WORD        BLUE, BLUE, BLUE, BLUE, 0, 0, 0, 0, BLUE, BLUE, BLUE, BLUE      ; ####    ####   
 
 ; *****************************************************************************************************************************
 ; * Código
@@ -236,13 +234,13 @@ start:
 box_position:
     MOV R1, BOX_LIN                     ; linha inicial da caixa
     MOV R2, BOX_COL                     ; coluna inicial da caixa
-    MOV R4, DEF_BOX                  ; endereço da tabela que define a caixa     
+    MOV R4, DEF_BOX                     ; endereço da tabela que define a caixa     
     CALL draw_object                    ; chama a função para desenhar a caixa
 
 pacman_position:
-    MOV R1, START_LIN                   ; linha inicial do pacman
-    MOV R2, START_COL                   ; coluna inicial do pacman
-    MOV R4, DEF_OPEN_PACMAN_RIGHT    ; endereço da tabela que define o pacman
+    MOV R1, PAC_LIN                     ; linha inicial do pacman
+    MOV R2, PAC_COL                     ; coluna inicial do pacman
+    MOV R4, DEF_OPEN_PAC_RIGHT       ; endereço da tabela que define o pacman
 
 show_pacman:
     CALL draw_object                    ; chama a função para desenhar o pacman
@@ -250,17 +248,14 @@ show_pacman:
 ghost_position:
     MOV R1, GHOST_LIN                   ; linha inicial do fantasma
     MOV R2, GHOST_COL                   ; coluna inicial do fantasma
-    MOV R4, DEF_GHOST                ; endereço da tabela que define o fantasma
+    MOV R4, DEF_GHOST                   ; endereço da tabela que define o fantasma
 
 show_ghost:
     CALL draw_object                    ; chama a função para desenhar o fantasma
 
-MOV R4, DISPLAYS                        ; guarda o endereço do periférico dos displays em R4
-MOV R11, INITIAL_COUNTER                ; inicializa o contador a 0
-MOV [R4], R11                           ; põe o valor do contador no display
-MOV R10, 0                              ; inicializa R10 a 0
-MOV R1, START_LIN                       ;
-MOV R2, START_COL                       ;
+
+MOV R1, PAC_LIN                         ; inicializa a posição inicial do pacman
+MOV R2, PAC_COL                         ; inicializa a coluna inicial do pacman
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas
@@ -268,15 +263,15 @@ main: ; ciclo principal
     JNZ main
 
 ; *****************************************************************************************************************************
-; write_pixel - Escreve um pixel na linha e coluna indicadas.
+; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
 ;               R3 - cor do pixel (em formato ARGB de 16 bits)
 ;
 ; *****************************************************************************************************************************
 write_pixel:
-	MOV  [DEF_LINE], R1		; seleciona a linha
-	MOV  [DEF_COLUMN], R2	; seleciona a coluna
+	MOV  [DEF_LINE], R1		    ; seleciona a linha
+	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
 	MOV  [DEF_PIXEL], R3		; altera a cor do pixel na linha e coluna já selecionadas
 	RET
 
@@ -296,7 +291,6 @@ draw_object:
     PUSH R6
     PUSH R7
     PUSH R8
-    PUSH R9
     MOV R5, [R4]                ; obtem altura do objeto 
     ADD R4, 2                   ; endereço da largura do objeto
     MOV R6, [R4]                ; obtem largura do objeto (nº colunas)
@@ -305,19 +299,19 @@ draw_object:
 
 draw_rows:
     MOV R7, R6                  ; contador linhas que faltam desenhar
-    MOV R2, R8
+    MOV R2, R8                  ; reinicia a coluna
     draw_pixels:
         MOV R3, [R4]            ; obtém a cor do próximo pixel do objeto
         CALL write_pixel        ; chama a função que desenha cada pixel do objeto
         ADD R4, 2               ; obtem o endereço da cor do próximo pixel
         ADD R2, 1               ; próxima coluna
-        SUB R7, 1               ; diminui contador do numero de pixels que faltam desenhar nesta linha
+        SUB R7, 1               ; diminui contador do número de pixels que faltam desenhar nesta linha
         JNZ draw_pixels
     ADD R1, 1                   ; próxima linha
-    SUB R5, 1                   ; diminui contador do numero de linhas que faltam desenhar
+    SUB R5, 1                   ; diminui contador do número de linhas que faltam desenhar
     JNZ draw_rows               ; se ainda faltarem linhas repete o ciclo
-    POP R9                      ; recupera os valores anteriores dos registos modificados
-    POP R8
+
+    POP R8                      ; recupera os valores anteriores dos registos modificados
     POP R7
     POP R6
     POP R5
@@ -336,7 +330,7 @@ draw_rows:
 ;
 ; **********************************************************************
 delete_object:
-    PUSH R1
+    PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
 	PUSH R2
 	PUSH R3
 	PUSH R5
@@ -344,24 +338,24 @@ delete_object:
     PUSH R7
     PUSH R8
 
-    MOV R5, [R4]           ; obtem altura do objeto 
-    MOV R6, [R4+2]         ; obtem largura do objeto
-    MOV R8, R2             ; guarda coluna inicial
+    MOV R5, [R4]                ; obtem a altura do objeto 
+    MOV R6, [R4+2]              ; obtem largura do objeto (nº colunas)
+    MOV R8, R2                  ; guarda a coluna inicial
 
-delete_rows:       	       ; desenha os pixels do objeto a partir da tabela
-    MOV R7, R6             ; contador linhas que falta apagar
-    MOV R2, R8             ; reset para coluna inicial em cada nova linha
+delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
+    MOV R7, R6                  ; contador linhas que falta apagar
+    MOV R2, R8                  ; reset para coluna inicial em cada nova linha
     delete_pixels:
-        MOV	R3, 0	       ; cor para apagar o próximo pixel do objeto
-        CALL write_pixel   ; escreve cada pixel do objeto
-        ADD R2, 1          ; próxima coluna
-        SUB R7, 1		   ; menos uma coluna para tratar
-        JNZ delete_pixels  ; continua até percorrer toda a largura do objeto
-    ADD R1, 1
-    SUB R5, 1
-    JNZ delete_rows
-   
-    POP R8
+        MOV	R3, 0	            ; cor para apagar o próximo pixel do objeto
+        CALL write_pixel        ; escreve cada pixel do objeto
+        ADD R2, 1               ; próxima coluna
+        SUB R7, 1		        ; menos uma coluna para tratar
+        JNZ delete_pixels       ; continua até percorrer toda a largura do objeto
+    ADD R1, 1                   ; proxima linha
+    SUB R5, 1                   ; diminui o contador do número de linhas que faltam apagar
+    JNZ delete_rows             ; se ainda faltar apagar linhas repete o ciclo
+
+    POP R8                      ; recupera os valores anteriores dos registos modificados
     POP R7
     POP R6
     POP R5
@@ -371,7 +365,7 @@ delete_rows:       	       ; desenha os pixels do objeto a partir da tabela
     RET
 
 ; *****************************************************************************************************************************
-; IS_OBJ_AT_LIMIT - Testa se o objeto chegou aos limites do ecrã.
+; IS_OBJ_OVER_LIMIT - Testa se o objeto está a tentar ultrapassar aos limites do ecrã.
 ; Argumentos:	R1 - linha em que o objeto se encontra
 ;               R2 - coluna em que o objeto se encontra
 ;			    R4 - tabela que define o objeto
@@ -380,57 +374,57 @@ delete_rows:       	       ; desenha os pixels do objeto a partir da tabela
 ;
 ; Retorna: R0 - 1 ou 0 (True or False) dependendo se o objeto se encontra num limite ou não
 ; *****************************************************************************************************************************
-is_obj_at_limit:
-    PUSH    R1
+is_obj_over_limit:
+    PUSH    R1                  ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH    R2
 	PUSH	R5
 	PUSH	R6
     PUSH    R9
-    MOV R5, [R4]   ; altura objeto
-    MOV R6, [R4+2] ; largura objeto
-    ADD R1, R7
-    ADD R2, R8
-    CMP R7, 0     
-    JZ test_left_limit
+    MOV R5, [R4]                ; obtém a altura objeto
+    MOV R6, [R4+2]              ; obtém a largura objeto
+    ADD R1, R7                  ; soma à linha o valor do eventual movimento
+    ADD R2, R8                  ; soma à coluna o valor do eventual movimento
+    CMP R7, 0                   ; determina se o objeto está a ser movido na vertical
+    JZ test_left_limit          ; se não estiver a tentar ser movido na vertical salta à frente o teste do limite superior diretamente para o teste do limite esquerdo
 
 test_top_limit:
-    MOV R9, MIN_LIN
-    CMP R1, R9
-    JLT at_limit
-    CMP R8, 0
-    JZ test_bottom_limit
+    MOV R9, MIN_LIN             ; guarda o valor do limite superior do ecrã
+    CMP R1, R9                  ; compara este valor com o valor da linha em que o objeto se encontra
+    JLT over_limit              ; se o valor for inferior então o objeto está a tentar ultrapassar um dos limite então salta para over_limit
+    CMP R8, 0                   ; determina se o objeto está a ser movido na horizontal
+    JZ test_bottom_limit        ; se não estiver a tentar ser movido na horizontal salta à frente o teste do limite esquerdo diretamente para o teste do limite inferior
 
 test_left_limit:
-	MOV	R9, MIN_COL
-	CMP	R2, R9
-	JLT	at_limit
-    CMP R7, 0
-    JZ test_right_limit
+	MOV	R9, MIN_COL             ; guarda o valor do limite esquerdo das colunas do ecrã
+	CMP	R2, R9                  ; compara este valor com o valor da coluna em que o objeto se encontra
+	JLT	over_limit              ; se o valor for inferior então o objeto está a tentar ultrapassar um dos limite então salta para over_limit
+    CMP R7, 0                   ; determina se o objeto está a ser movido na vertical
+    JZ test_right_limit         ; se não estiver a tentar ser movido na vertical salta à frente o teste do limite inferior diretamente para o teste do limite direito
 
 test_bottom_limit:
-    ADD R5, R1
-    MOV R9, MAX_LIN
-    CMP R5, R9 
-	JGT	at_limit
-    CMP R8, 0
-    JZ not_at_limit
+    ADD R5, R1                  ; soma à altura do objeto a linha em que se encontra                 
+    MOV R9, MAX_LIN             ; guarda o valor do limite inferior do ecrã
+    CMP R5, R9                  ; compara o valor da soma (o limite inferior do objeto) com o limite inferior do ecrã
+	JGT	over_limit              ; se o valor do limite inferior do objeto for superior ao limite inferior do ecrã então o objeto está a tentar ultrapassar o limite então salta para over_limit
+    CMP R8, 0                   ; determina se o objeto está a ser movido na horizontal
+    JZ not_over_limit           ; se não estiver a tentar ser movido na horizontal salta à frente o teste do limite direito diretamente para not_over_limit
 
 test_right_limit:
-    ADD	R6, R2
-	MOV	R9, MAX_COL
-	CMP	R6, R9
-	JGT	at_limit
-    JMP not_at_limit 
+    ADD	R6, R2                  ; soma à largira do objeto a coluna em que se encontra
+	MOV	R9, MAX_COL             ; guarda o valor do limite direito do ecrã
+	CMP	R6, R9                  ; compara o valor da soma (o limite direito do objeto) com o limite direito do ecrã
+	JGT	over_limit              ; se o valor do limite direito do objeto for superior ao limite direito do ecrã então o objeto está a tentar ultrapassar o limite então salta para at_limit
+    JMP not_over_limit          ; se não, salta para not_at_limit
 
-at_limit:
-    MOV R0, TRUE
-    JMP leave_is_obj_at_limit
+over_limit:
+    MOV R0, TRUE                ; move o valor 1 para R0 (de modo a representar TRUE)
+    JMP leave_limit_tests       ; salta para o fim da rotina
 
-not_at_limit:
-    MOV R0, FALSE
+not_over_limit:
+    MOV R0, FALSE               ; move o valor 0 para R0 (de modo a representar FALSE)
 
-leave_is_obj_at_limit:
-    POP R9
+leave_limit_tests:
+    POP R9                      ; recupera os valores anteriores dos registos modificados
 	POP	R6
 	POP	R5
     POP R2
@@ -450,32 +444,27 @@ leave_is_obj_at_limit:
 ;               R2 - novo valor da coluna, após o movimento
 ; *****************************************************************************************************************************
 move_object:
-    PUSH R0
+    PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R6
     PUSH R9
-    PUSH R4
 
-    MOV R4, R3
-    CALL is_obj_at_limit
-    CMP R0, TRUE
-    JZ pre_end
-    CALL delete_object   ; apaga o objeto
-    POP R4
-    ADD R1, R7           ; obtém nova linha
-    ADD R2, R8           ; obtém nova coluna
-    CALL draw_object     ; desenha versão animada/intermedia do objeto
-    CALL delay
-    CALL delete_object   ; apaga o objeto
-    MOV R4, R3
-    CALL draw_object     ; desenha versão final do objeto
-    CALL delay
-    JMP end_movement
-
-pre_end:
-    POP R4
+    CALL is_obj_over_limit      ; chama a função que verifica se o objeto está a tentar ultrapassar algum limite com este movimento
+    CMP R0, TRUE                ; compara o retorno da função (R0) com o valor para TRUE
+    JZ end_movement             ; se a função retornar true então saltamos para end_movement pois o movimento é proíbido
+    CALL delete_object          ; se não, apaga o objeto
+    ADD R1, R7                  ; obtém nova linha
+    ADD R2, R8                  ; obtém nova coluna
+    PUSH R4                     ; guarda o valor de R4
+    MOV R4, R3                  ; move o valor de R3 para R4 para ser usado como argumento na função seguinte
+    CALL draw_object            ; desenha versão animada do objeto
+    CALL delay                  ; chama uma função para atrasar/abrandar o movimento
+    CALL delete_object          ; apaga a versão animada do objeto
+    POP R4                      ; recupera o valor de R4
+    CALL draw_object            ; desenha versão final do objeto
+    CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
 
 end_movement:
-    POP R9
+    POP R9                      ; recupera os valores anteriores dos registos modificados
     POP R6
     POP R0
     RET
@@ -496,12 +485,12 @@ keyboard:
     PUSH R11
 
     MOV R0, 0                   ; inicializa R0 para guardar a tecla pressionada
-    MOV R4, TEC_L               ; endereço do periférico das linhas do teclado
-    MOV R5, TEC_C               ; endereço do periférico das colunas do teclado
+    MOV R4, KEY_LIN             ; endereço do periférico das linhas do teclado
+    MOV R5, KEY_COL             ; endereço do periférico das colunas do teclado
     MOV R7, MASK_TEC            ; máscara para a leitura do teclado
 
     reset_line: 
-        MOV R3, LINHA           ; define a linha a ler (inicialmente a 1)
+        MOV R3, KEY_START_LINE  ; define a linha a ler (inicialmente a 1)
         MOV R9, 0               ; inicializa o contador de linhas a 0
 
     check_key:
@@ -523,7 +512,7 @@ keyboard:
         JMP reset_line          ; caso contrário, volta para a 1ª linha
 
     is_key_pressed:
-        CALL movement_key       
+        CALL movement_key       ; chama uma função para detetar se a tecla pressionada é uma tecla de movimento
         MOVB [R4], R3           ; ativa a linha para leitura do teclado
         MOVB R0, [R5]           ; lê a coluna do teclado
         AND R0, R7              ; aplica a máscara
@@ -531,10 +520,10 @@ keyboard:
         JNZ is_key_pressed      ; se não foi libertada, espera que seja
 
     POP R0                      ; recupera a coluna pressionada
-    POP R11
+    POP R11                     ; recupera os valores anteriores dos registos modificados
     POP R10
     POP R9
-    POP R8                      ; recupera os valores anteriores dos registos modificados
+    POP R8                      
     POP R7
     POP R6
     POP R5
@@ -551,97 +540,97 @@ keyboard:
 ; Retorna:      R11 - valor atualizado do contador
 ; *****************************************************************************************************************************
 movement_key:
-    PUSH R3                 ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R3                     ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R4
     PUSH R5
     PUSH R6
     PUSH R7
     PUSH R8
 
-    MOV R5, 500             ; inicializa R5 com o valor de iterações para delay
+    MOV R5, DELAY                 ; inicializa R5 com o valor de iterações para delay
 
     ; Key mappings for movement
-    SHL R3, 4               ; coloca linha nibble high
-    OR R3, R0               ; juntamos a coluna (nibble low)
-    MOV R6, UP_LEFT_KEY
-    CMP R3, R6
-    JZ move_up_left         ;
-    MOV R6, UP_KEY
-    CMP R3, R6              ; verifica se é a tecla para mover para cima
-    JZ move_up
-    MOV R6, UP_RIGHT_KEY
-    CMP R3, R6
-    JZ move_up_right
-    MOV R6, LEFT_KEY
-    CMP R3, R6              ; verifica se é a tecla para mover para a esquerda
-    JZ move_left
-    MOV R6, RIGHT_KEY
-    CMP R3, R6              ; verifica se é a tecla para mover para a direita
-    JZ move_right
-    MOV R6, DOWN_LEFT_KEY
-    CMP R3, R6
-    JZ move_down_left
-    MOV R6, DOWN__KEY
-    CMP R3, R6              ; verifica se é a tecla para mover para baixo
-    JZ move_down
-    MOV R6, DOWN_RIGHT_KEY
-    CMP R3, R6
-    JZ move_down_right
-    JMP end_move
+    SHL R3, 4                   ; coloca linha nibble high
+    OR R3, R0                   ; juntamos a coluna (nibble low)
+    MOV R6, UP_LEFT_KEY         ; move para R6 o valor hexadecimal que representa o movimento UP/LEFT
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_up_left             ; se a tecla pressionada for UP/LEFT salta para move_up_left
+    MOV R6, UP_KEY              ; move para R6 o valor hexadecimal que representa o movimento UP
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_up                  ; se a tecla pressionada for UP salta para move_up
+    MOV R6, UP_RIGHT_KEY        ; move para R6 o valor hexadecimal que representa o movimento UP/RIGHT
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_up_right            ; se a tecla pressionada for UP/RIGHT salta para move_up_right
+    MOV R6, LEFT_KEY            ; move para R6 o valor hexadecimal que representa o movimento LEFT
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_left                ; se a tecla pressionada for LEFT salta para move_left
+    MOV R6, RIGHT_KEY           ; move para R6 o valor hexadecimal que representa o movimento RIGHT
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_right               ; se a tecla pressionada for RIGHT salta para move_right
+    MOV R6, DOWN_LEFT_KEY       ; move para R6 o valor hexadecimal que representa o movimento DOWN/LEFT
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_down_left           ; se a tecla pressionada for DOWN/LEFT salta para move_down_left
+    MOV R6, DOWN__KEY           ; move para R6 o valor hexadecimal que representa o movimento DOWN
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_down                ; se a tecla pressionada for DOWN salta para move_down
+    MOV R6, DOWN_RIGHT_KEY      ; move para R6 o valor hexadecimal que representa o movimento DOWN_RIGHT
+    CMP R3, R6                  ; compara a tecla pressionada como o valor em R6
+    JZ move_down_right          ; se a tecla pressionada for DOWN salta para move_down_right
+    JMP end_move                ; se a tecla pressionada não for nenhuma das teclas testadas acima então salta para end_move
 
 move_up_left:
-    MOV R3, DEF_OPEN_PACMAN_UP_LEFT
-    MOV R7, -1
-    MOV R8, -1
-    JMP move
+    MOV R4, DEF_OPEN_PAC_UP_LEFT    ; guarda em R4 o valor da tabela que define o pacman de boca aberta para cima e para a esquerda
+    MOV R7, -1                      ; guarda em R7 o valor -1, R7 representa o movimento vertical ao mover para cima o objeto sutrai 1 à sua linha atual
+    MOV R8, -1                      ; guarda em R8 o valor -1, R8 representa o movimento horizontal ao mover para a esquerda o objeto sutrai 1 à sua coluna atual
+    JMP move                        ; salta para move para não alterar os valores de R4, R7 e R8
 
 move_up:
-    MOV R3, DEF_OPEN_PACMAN_UP
-    MOV R7, -1
-    MOV R8, 0
-    JMP move
+    MOV R4, DEF_OPEN_PAC_UP         ; guarda em R4 o valor da tabela que define o pacman de boca aberta para cima
+    MOV R7, -1                      ; guarda em R7 o valor -1
+    MOV R8, 0                       ; guarda em R8 o valor 0. O movimento UP não requer translações horizontais
+    JMP move                        ; salta para move
 
 move_up_right:
-    MOV R3, DEF_OPEN_PACMAN_UP_RIGHT
-    MOV R7, -1
-    MOV R8, 1
-    JMP move
+    MOV R4, DEF_OPEN_PAC_UP_RIGHT   ; guarda em R4 o valor da tabela que define o pacman de boca aberta para cima e para a direita
+    MOV R7, -1                      ; guarda em R7 o valor -1
+    MOV R8, 1                       ; guarda em R8 o valor 1
+    JMP move                        ; salta para move
 
 move_left:
-    MOV R3, DEF_OPEN_PACMAN_LEFT
-    MOV R7, 0
-    MOV R8, -1
-    JMP move
+    MOV R4, DEF_OPEN_PAC_LEFT       ; guarda em R4 o valor da tabela que define o pacman de boca aberta para a esquerda
+    MOV R7, 0                       ; guarda em R7 o valor 0. O movimento LEFT não requer translações verticais
+    MOV R8, -1                      ; guarda em R8 o valor -1
+    JMP move                        ; salta para move
 
 move_right:
-    MOV R3, DEF_OPEN_PACMAN_RIGHT
-    MOV R7, 0
-    MOV R8, 1
-    JMP move
+    MOV R4, DEF_OPEN_PAC_RIGHT      ; guarda em R4 o valor da tabela que define o pacman de boca aberta para a direita
+    MOV R7, 0                       ; guarda em R7 o valor 0
+    MOV R8, 1                       ; guarda em R8 o valor 1
+    JMP move                        ; salta para move
 
 move_down_left:
-    MOV R3, DEF_OPEN_PACMAN_DOWN_LEFT
-    MOV R7, 1
-    MOV R8, -1
-    JMP move
+    MOV R4, DEF_OPEN_PAC_DOWN_LEFT  ; guarda em R4 o valor da tabela que define o pacman de boca aberta para baixo e para a esquerda
+    MOV R7, 1                       ; guarda em R7 o valor 1
+    MOV R8, -1                      ; guarda em R8 o valor -1
+    JMP move                        ; salta para move
 
 move_down:
-    MOV R3, DEF_OPEN_PACMAN_DOWN
-    MOV R7, 1
-    MOV R8, 0
-    JMP move
+    MOV R4, DEF_OPEN_PAC_DOWN       ; guarda em R4 o valor da tabela que define o pacman de boca aberta para baixo
+    MOV R7, 1                       ; guarda em R7 o valor 1
+    MOV R8, 0                       ; guarda em R8 o valor 0
+    JMP move                        ; salta para move
 
 move_down_right:
-    MOV R3, DEF_OPEN_PACMAN_DOWN_RIGHT
-    MOV R7, 1
-    MOV R8, 1
+    MOV R4, DEF_OPEN_PAC_DOWN_RIGHT ; guarda em R4 o valor da tabela que define o pacman de boca aberta para baixo e para a direita
+    MOV R7, 1                       ; guarda em R7 o valor 1 
+    MOV R8, 1                       ; guarda em R8 o valor 1 
 
 move:
-    MOV R4, DEF_PACMAN
-    CALL move_object
+    MOV R3, DEF_PACMAN              ; move para R3 a tabela que define o pacman de boca fechada
+    CALL move_object                ; chama a função move_object
 
 end_move:
-    POP R8                  ; recupera os valores anteriores dos registos modificados
+    POP R8                          ; recupera os valores anteriores dos registos modificados
     POP R7
     POP R6
     POP R5
@@ -649,18 +638,15 @@ end_move:
     POP R3
     RET
 
-; **********************************************************************
-; DELAY - Introduces a delay
-; Argumentos: Nenhum
-; **********************************************************************
+; *****************************************************************************************************************************
+; DELAY - Introduz um delay
+; *****************************************************************************************************************************
 delay:
-    PUSH R0
-    PUSH R1
-    MOV R0, DELAY_COUNT
+    PUSH R0                     ; guarda o valor de R0
+    MOV R0, DELAY               ; move para R0 o valor do DELAY (número grande)
 
 delay_loop:
-    DEC R0
-    JNZ delay_loop
-    POP R1
-    POP R0
+    DEC R0                      ; decrementa o valor de R0
+    JNZ delay_loop              ; repete o loop até R0 chegar a 0
+    POP R0                      ; recupera o valor de R0
     RET
