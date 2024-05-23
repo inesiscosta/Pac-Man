@@ -46,23 +46,23 @@ MAX_COL		           EQU  63         ; número da coluna mais à direita que o ob
 
 PAC_HEIGHT             EQU 5           ; altura do pacman
 PAC_WIDTH		       EQU 4		   ; largura do pacman
-YELLOW_PIXEL           EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
+YLW           EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
 
 GHOST_HEIGHT           EQU 4           ; altura do fantasma
 GHOST_WIDTH		       EQU 4		   ; largura do fantasma
-GREEN_PIXEL            EQU 0F0A5H	   ; cor do pixel: verde em ARGB (opaco no máximo, verde a 10, azul a 5 e vermelho a 0)
+GRN            EQU 0F0A5H	   ; cor do pixel: verde em ARGB (opaco no máximo, verde a 10, azul a 5 e vermelho a 0)
 
 CANDY_HEIGHT           EQU 4           ; altura do rebuçado
 CANDY_WIDTH            EQU 4           ; largura do rebuçado
-RED_PIXEL              EQU 0FF00H      ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+RED              EQU 0FF00H      ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 
 EXPLOSION_HEIGHT       EQU 5           ; altura da explosão
 EXPLOSION_WIDTH        EQU 5           ; largura da explosão
-CYAN_PIXEL             EQU 0F4FFH      ; cor do pixel: ciano em ARGB (opaco, verde e azul no máximo, vermelho a 4)
+CYN             EQU 0F4FFH      ; cor do pixel: ciano em ARGB (opaco, verde e azul no máximo, vermelho a 4)
 
 BOX_HEIGHT             EQU 8           ; altura da caixa
 BOX_WIDTH		       EQU 12		   ; largura da caixa
-BLUE_PIXEL             EQU 0F469H	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
+BLU             EQU 0F469H	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
 
 ; *****************************************************************************************************************************
 ; * Dados 
@@ -78,57 +78,57 @@ SP_initial:     ; este é o endereço (1200H) com que o SP deve ser inicializado
 DEFINE_PACMAN:  ; tabela que define o pacman (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
-    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
-    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
-    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; #### 
-	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
+	WORD		000, YLW, YLW, 000	                        ;  ## 
+    WORD		YLW, YLW, YLW, YLW		; ####   
+    WORD		YLW, YLW, YLW, YLW		; ####   
+    WORD		YLW, YLW, YLW, YLW		; #### 
+	WORD		000, YLW, YLW, 000	                        ;  ## 
 
 DEFINE_OPEN_PACMAN_RIGHT:  ; tabela que define o pacman com a boca aberta para a direita (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
-    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; ####   
-    WORD		YELLOW_PIXEL, 0, 0, 0		                                ; #   
-    WORD		YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL, YELLOW_PIXEL		; #### 
-	WORD		0, YELLOW_PIXEL, YELLOW_PIXEL, 0	                        ;  ## 
+	WORD		000, YLW, YLW, 000	                        ;  ## 
+    WORD		YLW, YLW, YLW, YLW		; ####   
+    WORD		YLW, 000, 000, 000		                                ; #   
+    WORD		YLW, YLW, YLW, YLW		; #### 
+	WORD		000, YLW, YLW, 000	                        ;  ## 
 
 DEFINE_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
     WORD        GHOST_HEIGHT
     WORD        GHOST_WIDTH
-    WORD        0, GREEN_PIXEL, GREEN_PIXEL, 0                              ;  ## 
-    WORD        GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL          ; ####
-    WORD        GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL, GREEN_PIXEL          ; ####
-    WORD        GREEN_PIXEL, 0, 0, GREEN_PIXEL                              ; #  #
+    WORD        000, GRN, GRN, 000                              ;  ## 
+    WORD        GRN, GRN, GRN, GRN          ; ####
+    WORD        GRN, GRN, GRN, GRN          ; ####
+    WORD        GRN, 000, 000, GRN                              ; #  #
 
 DEFINE_CANDY:   ; tabela que define o rebuçado (altura, largura, pixels, cor)
     WORD        CANDY_HEIGHT
     WORD        CANDY_WIDTH
-    WORD        0, 0, 0, RED_PIXEL                                          ;    #
-    WORD        0, RED_PIXEL, RED_PIXEL, 0                                  ;  ## 
-    WORD        0, RED_PIXEL, RED_PIXEL, 0                                  ;  ##
-    WORD        RED_PIXEL, 0, 0, 0                                          ; #
+    WORD        000, 000, 000, RED                                          ;    #
+    WORD        000, RED, RED, 000                                  ;  ## 
+    WORD        000, RED, RED, 000                                  ;  ##
+    WORD        RED, 000, 000, 000                                          ; #
 
 DEFINE_EXPLOSION:   ; tabela que define a explosão (altura, largura, pixels, cor)
     WORD        EXPLOSION_HEIGHT
     WORD        EXPLOSION_WIDTH
-    WORD        CYAN_PIXEL, 0, 0, 0, CYAN_PIXEL                              ; #   #
-    WORD        0, CYAN_PIXEL, 0, CYAN_PIXEL, 0                              ;  # # 
-    WORD        0, 0, CYAN_PIXEL, 0, 0                                       ;   #  
-    WORD        0, CYAN_PIXEL, 0, CYAN_PIXEL, 0                              ;  # # 
-    WORD        CYAN_PIXEL, 0, 0, 0, CYAN_PIXEL                              ; #   #
+    WORD        CYN, 000, 000, 000, CYN                              ; #   #
+    WORD        000, CYN, 000, CYN, 000                              ;  # # 
+    WORD        000, 000, CYN, 000, 000                                       ;   #  
+    WORD        000, CYN, 000, CYN, 000                              ;  # # 
+    WORD        CYN, 000, 000, 000, CYN                              ; #   #
 
 DEFINE_BOX:     ; tabela que define a caixa onde nasce o pacman (altura, largura, pixels, cor)
     WORD        BOX_HEIGHT
     WORD        BOX_WIDTH
-    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
-    WORD        BLUE_PIXEL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE_PIXEL                                                            ; #          #
-    WORD        BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, 0, 0, 0, 0, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL, BLUE_PIXEL      ; ####    ####   
+    WORD        BLU, BLU, BLU, BLU, 000, 000, 000, 000, BLU, BLU, BLU, BLU      ; ####    ####
+    WORD        BLU, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, BLU                                                            ; #          #
+    WORD        BLU, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, BLU                                                            ; #          #
+    WORD        BLU, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, BLU                                                            ; #          #
+    WORD        BLU, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, BLU                                                            ; #          #
+    WORD        BLU, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, BLU                                                            ; #          #
+    WORD        BLU, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000, BLU                                                            ; #          #
+    WORD        BLU, BLU, BLU, BLU, 000, 000, 000, 000, BLU, BLU, BLU, BLU      ; ####    ####   
 
 ; *****************************************************************************************************************************
 ; * Código
