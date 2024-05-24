@@ -31,7 +31,7 @@ STOP_SOUND             EQU 6066H       ; endereço do comando para terminar a re
 
 ; Imagens
 START_MENU_IMG         EQU 0           ;
-GAME_BACKGROUND        EQU 0           ;
+GAME_BACKGROUND        EQU 1           ;
 
 ; Sons
 PACMAN_CHOMP           EQU 0           ; som do pacman a movimentar-se
@@ -95,7 +95,7 @@ YLW                    EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, ver
 GRN                    EQU 0F0A5H	   ; cor do pixel: verde em ARGB (opaco no máximo, verde a 10, azul a 5 e vermelho a 0)
 RED                    EQU 0FF00H      ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 CYAN                   EQU 0F4FFH      ; cor do pixel: ciano em ARGB (opaco, verde e azul no máximo, vermelho a 4)
-BLUE                   EQU 0F469H	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
+BLUE                   EQU 0F00FH	   ; cor do pixel: azul em ARGB (opaco e azul a 9, verde a 6 e vermelho a 4)
 
 ; Medidas
 PAC_HEIGHT             EQU 5           ; altura do pacman
@@ -279,6 +279,7 @@ start:
     MOV R11, 0
     MOV [DELETE_WARNING], R0	        ; apaga o aviso de nenhum cenário selecionado (o valor de R0 não é relevante)
     MOV [DELETE_SCREEN], R0	            ; apaga todos os pixels já desenhados (o valor de R0 não é relevante)
+    MOV R0, GAME_BACKGROUND
     MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo        
 
     CALL draw_center_box
@@ -327,8 +328,8 @@ pacman_position:
     MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
     CALL draw_object                    ; chama a função para desenhar o pacman
 
-;EI0
-;EI
+EI0
+EI
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas

@@ -1534,7 +1534,7 @@
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
     "defaultPenColor" : 65280,
-    "image paths" : [ "Background.jpg" ],
+    "image paths" : [ "START.jpg", "Background.jpg" ],
     "sounds/videos settings" : [ {
       "filePathName" : "pacman_chomp.wav",
       "relative sound volume" : 1.0,
