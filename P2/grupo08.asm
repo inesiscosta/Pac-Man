@@ -13,6 +13,7 @@ TRUE                   EQU 1           ; valor numérico para representar TRUE (
 FALSE                  EQU 0           ; valor numérico para representar FALSE (0)
 DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar a animação do movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
+NUM_GHOSTS             EQU 4           ; número de ghosts (0-4)
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
@@ -29,6 +30,7 @@ RESUME_SOUND           EQU 6006H       ; endereço do comando para resumir a rep
 STOP_SOUND             EQU 6066H       ; endereço do comando para terminar a reprodução do som ou video especificado
 
 ; Imagens
+START_MENU_IMG         EQU 0           ;
 GAME_BACKGROUND        EQU 0           ;
 
 ; Sons
@@ -43,6 +45,9 @@ RIGHT_KEY              EQU 24H         ; key 6 for moving right
 DOWN_LEFT_KEY          EQU 41H         ; key 8 for moving down and left
 DOWN__KEY              EQU 42H         ; key 9 for moving down
 DOWN_RIGHT_KEY         EQU 44H         ; key A for moving down and right
+START_KEY              EQU 81H         ; key C for starting the game
+PAUSE_KEY              EQU 82H         ; key D for pausing and resuming/unpausing the game
+END_GAME_KEY           EQU 84H         ; key to terminate the game
 
 ; Teclado
 KEY_LIN                EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
@@ -62,8 +67,8 @@ GHOST1_START_COL       EQU 0           ; coluna inicial do fantasma1 (encostado 
 GHOST2_START_COL       EQU 62          ; coluna inicial do fantasma2 (encostado ao limite esquerdo)
 GHOST3_START_COL       EQU 0           ; coluna inicial do fantasma3 (encostado ao limite esquerdo)
 GHOST4_START_COL       EQU 62          ; coluna inicial do fantasma4 (encostado ao limite esquerdo)
-PACMAN_BOX_LIN         EQU 11          ; linha da caixa
-PACMAN_BOX_COL	       EQU 26          ; coluna da caixa
+BOX_LIN                EQU 11          ; linha da caixa
+BOX_COL	               EQU 26          ; coluna da caixa
 CANDY1_LIN			   EQU  1          ; linha do 1º rebuçado
 CANDY1_COL		       EQU  1   	   ; coluna do 1º rebuçado
 CANDY2_LIN			   EQU  1          ; linha do 2º rebuçado
@@ -101,14 +106,23 @@ CANDY_HEIGHT           EQU 4           ; altura do rebuçado
 CANDY_WIDTH            EQU 4           ; largura do rebuçado
 EXPLOSION_HEIGHT       EQU 5           ; altura da explosão
 EXPLOSION_WIDTH        EQU 5           ; largura da explosão
-PACMAN_BOX_HEIGHT      EQU 8           ; altura da caixa
-PACMAN_BOX_WIDTH	   EQU 12		   ; largura da caixa
+BOX_HEIGHT             EQU 8           ; altura da caixa
+BOX_WIDTH	           EQU 12		   ; largura da caixa
 
 ; Limites
 MIN_LIN                EQU 1           ; linha limite mínimo do ecrã
 MAX_LIN                EQU 31          ; linha limite máximo do ecrã
 MIN_COL                EQU 1           ; coluna limite máximo do ecrã
 MAX_COL                EQU 63          ; coluna limite mínimo do ecrã
+
+; Estados de jogo
+INITIAL                EQU 0            ; indica que o jogo ainda não foi iniciado
+PLAYING                EQU 1            ; indica que o jogo está a decorrer
+PAUSED                 EQU 2            ; indica que o jogo se encontra em pausa
+WON                    EQU 3            ; indica que o jogo terminou e o jogador ganhou
+GAME_OVER              EQU 4            ; indica que o jogo terminou e o jogador perdeu
+
+GAME_STATE             EQU 3FEAH        ; endereço da memoria onde se encontra o estado atual do jogo
 ; *****************************************************************************************************************************
 ; * Dados 
 ; *****************************************************************************************************************************
@@ -250,6 +264,7 @@ CHECK_IE:
 start:
     MOV SP, SP_initial
     MOV BTE, tab
+    CALL start_menu
     MOV R0, 0                           ; inicializa todos os registos a zero
     MOV R1, 0
     MOV R2, 0
@@ -320,6 +335,22 @@ main: ; ciclo principal
     CALL ghost_cicle
     JMP main
 
+start_menu:
+    MOV [DELETE_WARNING], R0	        ; apaga o aviso de nenhum cenário selecionado (o valor de R0 não é relevante)
+    MOV [DELETE_SCREEN], R0	            ; apaga todos os pixels já desenhados (o valor de R0 não é relevante)
+    MOV R0, START_MENU_IMG              ; move para R0 o nº da imagem de fundo para o start_menu
+    MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo
+    MOV R0, GAME_STATE
+    MOV R1, INITIAL
+    MOV [R0], R1
+
+awaiting_start:
+    CALL keyboard
+    MOV R1, PLAYING
+    MOV R2, [R0]
+    CMP R1, R2
+    JNZ awaiting_start
+
 ; *****************************************************************************************************************************
 ; DRAW_CENTER_BOX - Desenha a caixa central onde nasce o pacman
 ;
@@ -332,29 +363,29 @@ draw_center_box:
     PUSH R5
     PUSH R6
     PUSH R7
-    MOV R1, PACMAN_BOX_LIN              ; linha inicial da caixa
-    MOV R2, PACMAN_BOX_COL              ; coluna inicial da caixa
-    MOV R3, BLUE                        ; guarda cor pixel
-    MOV R4, PACMAN_BOX_HEIGHT           ; altura da caixa
-    SUB R4, 1                           ; 
-    MOV R5, PACMAN_BOX_WIDTH            ; largura da caixa
+    MOV R1, BOX_LIN              ; linha inicial da caixa
+    MOV R2, BOX_COL              ; coluna inicial da caixa
+    MOV R3, BLUE                 ; guarda cor pixel
+    MOV R4, BOX_HEIGHT           ; altura da caixa
+    SUB R4, 1                    ; 
+    MOV R5, BOX_WIDTH            ; largura da caixa
     SUB R5, 1
     MOV R7, R4
 draw_vertical_lines:
-    CALL write_pixel                    ; chama a função para pintar o pixel
+    CALL write_pixel             ; chama a função para pintar o pixel
     ADD R2, R5
-    CALL write_pixel                    ; chama a função para pintar o pixel
+    CALL write_pixel             ; chama a função para pintar o pixel
     SUB R2, R5
     ADD R1, 1
     SUB R7, 1
     JNZ draw_vertical_lines
-    MOV R1, PACMAN_BOX_LIN
-    MOV R2, PACMAN_BOX_COL
+    MOV R1, BOX_LIN
+    MOV R2, BOX_COL
     MOV R7, 3
 draw_horizontal_lines:
-    CALL write_pixel                    ; chama a função para pintar o pixel
+    CALL write_pixel              ; chama a função para pintar o pixel
     ADD R1, R4
-    CALL write_pixel                    ; chama a função para pintar o pixel
+    CALL write_pixel              ; chama a função para pintar o pixel
     SUB R1, R4
     ADD R2, 1
     SUB R7, 1
@@ -362,9 +393,9 @@ draw_horizontal_lines:
     ADD R2, 6
     MOV R7, 3
     draw_second_half:
-        CALL write_pixel                    ; chama a função para pintar o pixel
+        CALL write_pixel           ; chama a função para pintar o pixel
         ADD R1, R4
-        CALL write_pixel                    ; chama a função para pintar o pixel
+        CALL write_pixel           ; chama a função para pintar o pixel
         SUB R1, R4
         ADD R2, 1
         SUB R7, 1
@@ -659,6 +690,12 @@ keyboard:
         JMP exit_keyboard
 
     is_key_pressed:
+        CALL game_state_key     ; chama uma função para detetar se a tecla pressionada é uma tecla que altera o estado do jogo
+        MOV R8, PLAYING
+        MOV R9, GAME_STATE
+        MOV R10, [R9]
+        CMP R10, R8
+        JNZ exit_keyboard
         CALL movement_key       ; chama uma função para detetar se a tecla pressionada é uma tecla de movimento
 
     exit_keyboard:
@@ -674,12 +711,10 @@ keyboard:
     RET
 
 ; *****************************************************************************************************************************
-; MOVEMENT_KEY - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
-; Argumentos:   R0 - valor da coluna pressionada
-;               R3 - valor da linha pressionada
-;               R11 - valor atual do contador 
+; MOVEMENT_KEY - ????
+; Argumentos:   ????
 ;
-; Retorna:      R11 - valor atualizado do contador
+; Retorna:      
 ; *****************************************************************************************************************************
 movement_key:
     PUSH R3                     ; guarda os valores anteriores dos registos que são alterados nesta função
@@ -780,6 +815,104 @@ end_move:
     POP R5
     POP R4
     POP R3
+    RET
+
+
+; *****************************************************************************************************************************
+; GAME_STATE_KEY - ????
+; Argumentos:   ????
+;
+; Retorna:      
+; *****************************************************************************************************************************
+game_state_key:
+    PUSH R3                     ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R4
+    PUSH R5
+    PUSH R6
+
+    ; Key mappings
+    SHL R3, 4                   ; coloca linha nibble high
+    OR R3, R0                   ; juntamos a coluna (nibble low)
+    MOV R4, GAME_STATE
+    MOV R5, [R4]
+    MOV R6, START_KEY           ; move para R6 o valor hexadecimal que representa o movimento UP/LEFT
+    CMP R3, R6
+    JZ start_key_pressed
+    MOV R6, PAUSE_KEY
+    CMP R3, R6
+    JZ pause_key_pressed
+    MOV R6, END_GAME_KEY
+    CMP R3, R6
+    JZ end_game_key_pressed
+    JMP exit_state_key
+
+    start_key_pressed:
+        CMP R5, INITIAL
+        JNZ exit_state_key
+        MOV R6, PLAYING
+        MOV [R4], R6
+        JMP exit_state_key
+    
+    pause_key_pressed:
+        CMP R5, PLAYING
+        JZ pausing_game
+        MOV R6, PAUSED
+        CMP R5, R6
+        JZ resuming_game
+        JMP exit_state_key
+
+    pausing_game:
+        CALL pause_game
+        JMP exit_state_key
+
+    resuming_game:
+        CALL resume_game
+        JMP exit_state_key
+
+    end_game_key_pressed:
+        MOV R6, PLAYING
+        CMP R5, R6
+        JZ ending_game
+        MOV R6, PAUSED
+        CMP R5, R6
+        JZ ending_game
+        JMP exit_state_key
+
+    ending_game:
+        CALL end_game
+
+    exit_state_key:
+        POP R6                  ; recupera os valores anteriores dos registos modificados
+        POP R5
+        POP R4
+        POP R3
+        RET
+
+; *****************************************************************************************************************************
+; PAUSE_GAME - Pauses the game
+; To be implemented???
+; *****************************************************************************************************************************
+pause_game:
+    PUSH R1
+    POP R1
+    RET
+
+; *****************************************************************************************************************************
+; RESUME_GAME - Resumes the game
+; To be implemented???
+; *****************************************************************************************************************************
+resume_game:
+    PUSH R1
+    POP R1
+    RET
+
+; *****************************************************************************************************************************
+; END_GAME - Ends the game
+; To be implemented???
+; *****************************************************************************************************************************
+end_game:
+    PUSH R1
+    POP R1
     RET
 
 ; *****************************************************************************************************************************
