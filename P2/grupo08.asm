@@ -583,12 +583,6 @@ keyboard:
 
     is_key_pressed:
         CALL movement_key       ; chama uma função para detetar se a tecla pressionada é uma tecla de movimento
-        CALL ghost_cicle
-        MOVB [R4], R3           ; ativa a linha para leitura do teclado
-        MOVB R0, [R5]           ; lê a coluna do teclado
-        AND R0, R7              ; aplica a máscara
-        CMP R0, 0               ; verifica se a tecla foi libertada
-        JNZ is_key_pressed      ; se não foi libertada, espera que seja
 
     exit_keyboard:
         POP R10
