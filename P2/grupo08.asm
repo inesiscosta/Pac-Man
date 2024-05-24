@@ -11,13 +11,14 @@
 ; *****************************************************************************************************************************
 TRUE                   EQU 1           ; valor numérico para representar TRUE (1)
 FALSE                  EQU 0           ; valor numérico para representar FALSE (0)
-DELAY                  EQU 05000H       ; numero de ciclos de delay para atrasar a animação do movimento
+DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar a animação do movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
 DEF_COLUMN   	       EQU 600CH       ; endereço do comando para definir a coluna
 DEF_PIXEL    	       EQU 6012H       ; endereço do comando para escrever um pixel
+GET_PIXEL_COLOR        EQU 6010H       ; endereço do comando para obter a cor de um pixel
 DELETE_WARNING     	   EQU 6040H       ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 DELETE_SCREEN	 	   EQU 6002H       ; endereço do comando para apagar todos os pixels já desenhados
 SELECT_BACKGROUND_IMG  EQU 6042H       ; endereço do comando para selecionar uma imagem de fundo
@@ -61,8 +62,8 @@ GHOST1_START_COL       EQU 0           ; coluna inicial do fantasma1 (encostado 
 GHOST2_START_COL       EQU 62          ; coluna inicial do fantasma2 (encostado ao limite esquerdo)
 GHOST3_START_COL       EQU 0           ; coluna inicial do fantasma3 (encostado ao limite esquerdo)
 GHOST4_START_COL       EQU 62          ; coluna inicial do fantasma4 (encostado ao limite esquerdo)
-BOX_LIN                EQU 11          ; linha da caixa
-BOX_COL	               EQU 26          ; coluna da caixa
+PACMAN_BOX_LIN         EQU 11          ; linha da caixa
+PACMAN_BOX_COL	       EQU 26          ; coluna da caixa
 CANDY1_LIN			   EQU  1          ; linha do 1º rebuçado
 CANDY1_COL		       EQU  1   	   ; coluna do 1º rebuçado
 CANDY2_LIN			   EQU  1          ; linha do 2º rebuçado
@@ -100,8 +101,8 @@ CANDY_HEIGHT           EQU 4           ; altura do rebuçado
 CANDY_WIDTH            EQU 4           ; largura do rebuçado
 EXPLOSION_HEIGHT       EQU 5           ; altura da explosão
 EXPLOSION_WIDTH        EQU 5           ; largura da explosão
-BOX_HEIGHT             EQU 8           ; altura da caixa
-BOX_WIDTH		       EQU 12		   ; largura da caixa
+PACMAN_BOX_HEIGHT      EQU 8           ; altura da caixa
+PACMAN_BOX_WIDTH	   EQU 12		   ; largura da caixa
 
 ; Limites
 MIN_LIN                EQU 1           ; linha limite mínimo do ecrã
@@ -114,7 +115,7 @@ MAX_COL                EQU 63          ; coluna limite mínimo do ecrã
     PLACE 1000H
 
 pilha:
-    STACK 100H  ; espaço reservado para a pilha (200H bytes, pois são 100H words)
+    STACK 200H  ; espaço reservado para a pilha (200H bytes, pois são 100H words)
 
 SP_initial:     ; este é o endereço (1200H) com que o SP deve ser inicializado.
                 ; O 1.º end. de retorno será armazenado em 11FEH (1200H-2)
@@ -236,18 +237,6 @@ DEF_EXPLOSION:   ; tabela que define a explosão (altura, largura, pixels, cor)
     WORD        0, CYAN, 0, CYAN, 0                     ;  # # 
     WORD        CYAN, 0, 0, 0, CYAN                     ; #   #
 
-DEF_BOX:     ; tabela que define a caixa onde nasce o pacman (altura, largura, pixels, cor)
-    WORD        BOX_HEIGHT
-    WORD        BOX_WIDTH
-    WORD        BLUE, BLUE, BLUE, BLUE, 0, 0, 0, 0, BLUE, BLUE, BLUE, BLUE      ; ####    ####
-    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
-    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
-    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
-    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
-    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
-    WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
-    WORD        BLUE, BLUE, BLUE, BLUE, 0, 0, 0, 0, BLUE, BLUE, BLUE, BLUE      ; ####    ####   
-
 CHECK_IE:
     WORD 0   ; observa chamadas da interrupção 0
     WORD 0   ; observa chamadas da interrupção 1
@@ -276,12 +265,8 @@ start:
     MOV [DELETE_WARNING], R0	        ; apaga o aviso de nenhum cenário selecionado (o valor de R0 não é relevante)
     MOV [DELETE_SCREEN], R0	            ; apaga todos os pixels já desenhados (o valor de R0 não é relevante)
     MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo        
-    
-box_position:
-    MOV R1, BOX_LIN                     ; linha inicial da caixa
-    MOV R2, BOX_COL                     ; coluna inicial da caixa
-    MOV R4, DEF_BOX                     ; endereço da tabela que define a caixa     
-    CALL draw_object                    ; chama a função para desenhar a caixa
+
+    CALL draw_center_box
 
 ghost_position:
     MOV R2, GHOST1_LIN                  ; endereço da linha atual do fantasma
@@ -327,14 +312,71 @@ pacman_position:
     MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
     CALL draw_object                    ; chama a função para desenhar o pacman
 
-EI0
-EI
+;EI0
+;EI
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas
     CALL ghost_cicle
     JMP main
 
+; *****************************************************************************************************************************
+; DRAW_CENTER_BOX - Desenha a caixa central onde nasce o pacman
+;
+; *****************************************************************************************************************************
+draw_center_box:
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
+    MOV R1, PACMAN_BOX_LIN              ; linha inicial da caixa
+    MOV R2, PACMAN_BOX_COL              ; coluna inicial da caixa
+    MOV R3, BLUE                        ; guarda cor pixel
+    MOV R4, PACMAN_BOX_HEIGHT           ; altura da caixa
+    SUB R4, 1                           ; 
+    MOV R5, PACMAN_BOX_WIDTH            ; largura da caixa
+    SUB R5, 1
+    MOV R7, R4
+draw_vertical_lines:
+    CALL write_pixel                    ; chama a função para pintar o pixel
+    ADD R2, R5
+    CALL write_pixel                    ; chama a função para pintar o pixel
+    SUB R2, R5
+    ADD R1, 1
+    SUB R7, 1
+    JNZ draw_vertical_lines
+    MOV R1, PACMAN_BOX_LIN
+    MOV R2, PACMAN_BOX_COL
+    MOV R7, 3
+draw_horizontal_lines:
+    CALL write_pixel                    ; chama a função para pintar o pixel
+    ADD R1, R4
+    CALL write_pixel                    ; chama a função para pintar o pixel
+    SUB R1, R4
+    ADD R2, 1
+    SUB R7, 1
+    JNZ draw_horizontal_lines
+    ADD R2, 6
+    MOV R7, 3
+    draw_second_half:
+        CALL write_pixel                    ; chama a função para pintar o pixel
+        ADD R1, R4
+        CALL write_pixel                    ; chama a função para pintar o pixel
+        SUB R1, R4
+        ADD R2, 1
+        SUB R7, 1
+        JNZ draw_second_half
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
 ; *****************************************************************************************************************************
 ; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
 ; Argumentos:   R1 - linha
@@ -450,59 +492,94 @@ delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
 is_obj_over_limit:
     PUSH    R1                  ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH    R2
-	PUSH	R5
-	PUSH	R6
+    PUSH    R5
+    PUSH    R6
+    PUSH    R7
+    PUSH    R8
     PUSH    R9
+    PUSH    R10
+    PUSH    R11
     MOV R5, [R4]                ; obtém a altura objeto
     MOV R6, [R4+2]              ; obtém a largura objeto
+    MOV R11, BLUE               ; guarda o valor ARGB dos limites                  
     ADD R1, R7                  ; soma à linha o valor do eventual movimento
     ADD R2, R8                  ; soma à coluna o valor do eventual movimento
-    CMP R7, 0                   ; determina se o objeto está a ser movido na vertical
-    JZ test_left_limit          ; se não estiver a tentar ser movido na vertical salta à frente o teste do limite superior diretamente para o teste do limite esquerdo
 
-test_top_limit:
-    MOV R9, MIN_LIN             ; guarda o valor do limite superior do ecrã
-    CMP R1, R9                  ; compara este valor com o valor da linha em que o objeto se encontra
-    JLT over_limit              ; se o valor for inferior então o objeto está a tentar ultrapassar um dos limite então salta para over_limit
-    CMP R8, 0                   ; determina se o objeto está a ser movido na horizontal
-    JZ test_bottom_limit        ; se não estiver a tentar ser movido na horizontal salta à frente o teste do limite esquerdo diretamente para o teste do limite inferior
+check_top_pixels:
+    MOV R9, R6
+    SUB R9, 1
+    next_top_pixel:
+    MOV  [DEF_LINE], R1		    ; seleciona a linha
+	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
+	MOV  R10, [GET_PIXEL_COLOR]	; vê a cor do pixel na linha e coluna já selecionadas 
+    CMP R10, R11
+    JZ over_limit
+    ADD R2, 1
+    SUB R9, 1
+    JZ check_right_pixels
+    JMP next_top_pixel
 
-test_left_limit:
-	MOV	R9, MIN_COL             ; guarda o valor do limite esquerdo das colunas do ecrã
-	CMP	R2, R9                  ; compara este valor com o valor da coluna em que o objeto se encontra
-	JLT	over_limit              ; se o valor for inferior então o objeto está a tentar ultrapassar um dos limite então salta para over_limit
-    CMP R7, 0                   ; determina se o objeto está a ser movido na vertical
-    JZ test_right_limit         ; se não estiver a tentar ser movido na vertical salta à frente o teste do limite inferior diretamente para o teste do limite direito
+check_right_pixels:
+    MOV R9, R5
+    SUB R9, 1
+    next_right_pixel:
+    MOV  [DEF_LINE], R1		    ; seleciona a linha
+	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
+	MOV  R10, [GET_PIXEL_COLOR]	; vê a cor do pixel na linha e coluna já selecionadas 
+    CMP R10, R11
+    JZ over_limit
+    ADD R1, 1
+    SUB R9, 1
+    JZ check_bottom_pixels
+    JMP next_right_pixel
 
-test_bottom_limit:
-    ADD R5, R1                  ; soma à altura do objeto a linha em que se encontra                 
-    MOV R9, MAX_LIN             ; guarda o valor do limite inferior do ecrã
-    CMP R5, R9                  ; compara o valor da soma (o limite inferior do objeto) com o limite inferior do ecrã
-	JGT	over_limit              ; se o valor do limite inferior do objeto for superior ao limite inferior do ecrã então o objeto está a tentar ultrapassar o limite então salta para over_limit
-    CMP R8, 0                   ; determina se o objeto está a ser movido na horizontal
-    JZ not_over_limit           ; se não estiver a tentar ser movido na horizontal salta à frente o teste do limite direito diretamente para not_over_limit
+check_bottom_pixels:
+    MOV R9, R6
+    SUB R9, 1
+    next_bottom_pixel:
+    MOV  [DEF_LINE], R1		    ; seleciona a linha
+	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
+	MOV  R10, [GET_PIXEL_COLOR]	; vê a cor do pixel na linha e coluna já selecionadas 
+    CMP R10, R11
+    JZ over_limit
+    SUB R2, 1
+    SUB R9, 1
+    JZ check_left_pixels
+    JMP next_bottom_pixel
 
-test_right_limit:
-    ADD	R6, R2                  ; soma à largura do objeto a coluna em que se encontra
-	MOV	R9, MAX_COL             ; guarda o valor do limite direito do ecrã
-	CMP	R6, R9                  ; compara o valor da soma (o limite direito do objeto) com o limite direito do ecrã
-	JGT	over_limit              ; se o valor do limite direito do objeto for superior ao limite direito do ecrã então o objeto está a tentar ultrapassar o limite então salta para at_limit
-    JMP not_over_limit          ; se não, salta para not_at_limit
+check_left_pixels:
+    MOV R9, R5
+    SUB R9, 1
+    next_left_pixel:
+    MOV  [DEF_LINE], R1		    ; seleciona a linha
+	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
+	MOV  R10, [GET_PIXEL_COLOR]	; vê a cor do pixel na linha e coluna já selecionadas 
+    CMP R10, R11
+    JZ over_limit
+    SUB R1, 1
+    SUB R9, 1
+    JZ not_over_limits
+    JMP next_left_pixel    
 
 over_limit:
-    MOV R0, TRUE                ; move o valor 1 para R0 (de modo a representar TRUE)
-    JMP leave_limit_tests       ; salta para o fim da rotina
+    MOV R0, TRUE
+    JMP exit_limit_tests
 
-not_over_limit:
-    MOV R0, FALSE               ; move o valor 0 para R0 (de modo a representar FALSE)
+not_over_limits:
+    MOV R0, FALSE
+    JMP exit_limit_tests
 
-leave_limit_tests:
-    POP R9                      ; recupera os valores anteriores dos registos modificados
-	POP	R6
-	POP	R5
-    POP R2
-    POP R1
-	RET
+exit_limit_tests:
+    POP     R11
+    POP     R10
+    POP     R9
+    POP     R8
+    POP     R7
+    POP     R6
+    POP     R5
+    POP     R2
+    POP     R1
+    RET
 
 ; *****************************************************************************************************************************
 ; MOVE_OBJECT - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
