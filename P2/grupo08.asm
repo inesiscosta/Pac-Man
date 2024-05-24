@@ -11,7 +11,7 @@
 ; *****************************************************************************************************************************
 TRUE                   EQU 1           ; valor numérico para representar TRUE (1)
 FALSE                  EQU 0           ; valor numérico para representar FALSE (0)
-DELAY                  EQU 3000H       ; numero de ciclos de delay para atrasar o movimento
+DELAY                  EQU 5000H       ; numero de ciclos de delay para atrasar o movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 
 ; MediaCenter
@@ -26,6 +26,12 @@ LOOP_PLAY_SOUND        EQU 605CH       ; endereço do comando para reproduzir o 
 PAUSE_SOUND            EQU 605EH       ; endereço do comando para pausar a reprodução do som ou video especificado
 RESUME_SOUND           EQU 6006H       ; endereço do comando para resumir a reprodução do som ou video especificado
 STOP_SOUND             EQU 6066H       ; endereço do comando para terminar a reprodução do som ou video especificado
+
+; Imagens
+GAME_BACKGROUND        EQU 0           ;
+
+; Sons
+PACMAN_CHOMP           EQU 0           ; som do pacman a movimentar-se
 
 ; Controlos
 UP_LEFT_KEY            EQU 11H         ; key 0 for moving up and left
@@ -48,12 +54,35 @@ MASK_LSD               EQU 0FH         ; máscara para isolar os 4 btis de menor
 MASK_TENS              EQU 0F0H        ; máscara para isolar os bits que representam as dezenas
 
 ; Posições Iniciais
-PAC_LIN                EQU  13         ; linha inicial do pacman (a meio do ecrã)
-PAC_COL	               EQU  30         ; coluna inicial do pacman (a meio do ecrã)
-GHOST_LIN              EQU  13         ; linha inicial do fantasma (a meio do ecrã)
-GHOST_COL	           EQU  0          ; coluna inicial do fantasma (encostado ao limite esquerdo)
-BOX_LIN                EQU  11         ; linha da caixa
-BOX_COL	               EQU  26         ; coluna da caixa
+PAC_START_LIN          EQU 13          ; linha inicial do pacman (a meio do ecrã)
+PAC_START_COL          EQU 30          ; coluna inicial do pacman (a meio do ecrã)
+GHOST_START_LIN        EQU 13          ; linha inicial do fantasma (a meio do ecrã)
+GHOST1_START_COL       EQU 0           ; coluna inicial do fantasma1 (encostado ao limite esquerdo)
+GHOST2_START_COL       EQU 62          ; coluna inicial do fantasma2 (encostado ao limite esquerdo)
+GHOST3_START_COL       EQU 0           ; coluna inicial do fantasma3 (encostado ao limite esquerdo)
+GHOST4_START_COL       EQU 62          ; coluna inicial do fantasma4 (encostado ao limite esquerdo)
+BOX_LIN                EQU 11          ; linha da caixa
+BOX_COL	               EQU 26          ; coluna da caixa
+CANDY1_LIN			   EQU  1          ; linha do 1º rebuçado
+CANDY1_COL		       EQU  1   	   ; coluna do 1º rebuçado
+CANDY2_LIN			   EQU  1          ; linha do 2º rebuçado
+CANDY2_COL		       EQU  59 	       ; coluna do 2º rebuçado
+CANDY3_LIN			   EQU  27         ; linha do 3º rebuçado
+CANDY3_COL		       EQU  1 		   ; coluna do 3º rebuçado
+CANDY4_LIN			   EQU  27         ; linha do 4º rebuçado
+CANDY4_COL		       EQU  59		   ; coluna do 4º rebuçado
+
+; Posições Atuais
+PAC_LIN                EQU 3FECH       ; endereco da memoria onde se encontra a linha atual do pacman
+PAC_COL                EQU 3FEEH       ; endereco da memoria onde se encontra a coluna atual do pacman
+GHOST1_LIN             EQU 3FF0H       ; endereco da memoria onde se encontra a linha atual do fantasma1
+GHOST1_COL             EQU 3FF2H       ; endereco da memoria onde se encontra a coluna atual do fantasma1
+GHOST2_LIN             EQU 3FF4H       ; endereco da memoria onde se encontra a linha atual do fantasma2
+GHOST2_COL             EQU 3FF6H       ; endereco da memoria onde se encontra a coluna atual do fantasma2
+GHOST3_LIN             EQU 3FF8H       ; endereco da memoria onde se encontra a linha atual do fantasma3
+GHOST3_COL             EQU 3FFAH       ; endereco da memoria onde se encontra a coluna atual do fantasma3
+GHOST4_LIN             EQU 3FFCH       ; endereco da memoria onde se encontra a linha atual do fantasma4
+GHOST4_COL             EQU 3FFEH       ; endereco da memoria onde se encontra a coluna atual do fantasma4
 
 ; Cores
 YLW                    EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
@@ -79,7 +108,6 @@ MIN_LIN                EQU 1           ; linha limite mínimo do ecrã
 MAX_LIN                EQU 31          ; linha limite máximo do ecrã
 MIN_COL                EQU 1           ; coluna limite máximo do ecrã
 MAX_COL                EQU 63          ; coluna limite mínimo do ecrã
-
 ; *****************************************************************************************************************************
 ; * Dados 
 ; *****************************************************************************************************************************
@@ -90,6 +118,9 @@ pilha:
 
 SP_initial:     ; este é o endereço (1200H) com que o SP deve ser inicializado.
                 ; O 1.º end. de retorno será armazenado em 11FEH (1200H-2)
+
+tab:
+    WORD rot_int_0
 
 DEF_PACMAN:     ; tabela que define o pacman (altura, largura, pixels, cor)
     WORD        PAC_HEIGHT
@@ -180,6 +211,14 @@ DEF_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
     WORD        GRN, GRN, GRN, GRN                      ; ####
     WORD        GRN, 0, 0, GRN                          ; #  #
 
+DEF_GHOST_ANIMATED:   ; tabela que define o fantasma (altura, largura, pixels, cor)
+    WORD        GHOST_HEIGHT
+    WORD        GHOST_WIDTH
+    WORD        0, GRN, GRN, 0                          ;  ##
+    WORD        GRN, GRN, GRN, GRN                      ; ####
+    WORD        GRN, GRN, GRN, GRN                      ; ####
+    WORD        0, GRN, GRN, 0                          ;  ## 
+
 DEF_CANDY:   ; tabela que define o rebuçado (altura, largura, pixels, cor)
     WORD        CANDY_HEIGHT
     WORD        CANDY_WIDTH
@@ -215,6 +254,7 @@ DEF_BOX:     ; tabela que define a caixa onde nasce o pacman (altura, largura, p
     PLACE 0
 start:
     MOV SP, SP_initial
+    MOV BTE, tab
     MOV R0, 0                           ; inicializa todos os registos a zero
     MOV R1, 0
     MOV R2, 0
@@ -237,25 +277,52 @@ box_position:
     MOV R4, DEF_BOX                     ; endereço da tabela que define a caixa     
     CALL draw_object                    ; chama a função para desenhar a caixa
 
-pacman_position:
-    MOV R1, PAC_LIN                     ; linha inicial do pacman
-    MOV R2, PAC_COL                     ; coluna inicial do pacman
-    MOV R4, DEF_OPEN_PAC_RIGHT       ; endereço da tabela que define o pacman
-
-show_pacman:
-    CALL draw_object                    ; chama a função para desenhar o pacman
-
 ghost_position:
-    MOV R1, GHOST_LIN                   ; linha inicial do fantasma
-    MOV R2, GHOST_COL                   ; coluna inicial do fantasma
+    MOV R2, GHOST1_LIN                  ; endereço da linha atual do fantasma
+    MOV R1, GHOST_START_LIN             ; valor da linha inicial do fantasma
+    MOV [R2], R1                        ; guarda na RAM a linha atual do fantasma (de momento a inicial)
+    MOV R3, GHOST1_COL                  ; endereço da coluna inicial do fantasma
+    MOV R2, GHOST1_START_COL            ; valor da coluna inicial do fantasma
+    MOV [R3], R2                        ; guarda na RAM a coluna atual do fantasma (de momento a inicial)
     MOV R4, DEF_GHOST                   ; endereço da tabela que define o fantasma
-
-show_ghost:
     CALL draw_object                    ; chama a função para desenhar o fantasma
 
+candy1:
+    MOV R1, CANDY1_LIN
+    MOV R2, CANDY1_COL
+    MOV R4, DEF_CANDY
+    CALL draw_object
 
-MOV R1, PAC_LIN                         ; inicializa a posição inicial do pacman
-MOV R2, PAC_COL                         ; inicializa a coluna inicial do pacman
+candy2:
+    MOV R1, CANDY2_LIN
+    MOV R2, CANDY2_COL
+    MOV R4, DEF_CANDY
+    CALL draw_object
+
+candy3:
+    MOV R1, CANDY3_LIN
+    MOV R2, CANDY3_COL
+    MOV R4, DEF_CANDY
+    CALL draw_object
+
+candy4:
+    MOV R1, CANDY4_LIN
+    MOV R2, CANDY4_COL
+    MOV R4, DEF_CANDY
+    CALL draw_object
+
+pacman_position:
+    MOV R2, PAC_LIN                     ; endereço da linha atual do pacman
+    MOV R1, PAC_START_LIN               ; valor da linha inicial do pacman
+    MOV [R2], R1                        ; guarda na RAM a linha atual do pacman (de momento a inicial)
+    MOV R3, PAC_COL                     ; endereço da coluna inicial do pacman
+    MOV R2, PAC_START_COL               ; valor da coluna inicial do pacman
+    MOV [R3], R2                        ; guarda na RAM a coluna atual do pacman (de momento a inicial)
+    MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
+    CALL draw_object                    ; chama a função para desenhar o pacman
+
+EI0
+EI
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas
@@ -410,7 +477,7 @@ test_bottom_limit:
     JZ not_over_limit           ; se não estiver a tentar ser movido na horizontal salta à frente o teste do limite direito diretamente para not_over_limit
 
 test_right_limit:
-    ADD	R6, R2                  ; soma à largira do objeto a coluna em que se encontra
+    ADD	R6, R2                  ; soma à largura do objeto a coluna em que se encontra
 	MOV	R9, MAX_COL             ; guarda o valor do limite direito do ecrã
 	CMP	R6, R9                  ; compara o valor da soma (o limite direito do objeto) com o limite direito do ecrã
 	JGT	over_limit              ; se o valor do limite direito do objeto for superior ao limite direito do ecrã então o objeto está a tentar ultrapassar o limite então salta para at_limit
@@ -628,6 +695,8 @@ move_down_right:
 move:
     MOV R3, DEF_PACMAN              ; move para R3 a tabela que define o pacman de boca fechada
     CALL move_object                ; chama a função move_object
+    MOV [PAC_LIN], R1
+    MOV [PAC_COL], R2
 
 end_move:
     POP R8                          ; recupera os valores anteriores dos registos modificados
@@ -649,4 +718,69 @@ delay_loop:
     DEC R0                      ; decrementa o valor de R0
     JNZ delay_loop              ; repete o loop até R0 chegar a 0
     POP R0                      ; recupera o valor de R0
+    RET
+
+
+; *****************************************************************************************************************************
+; ROT_INT_0 - Rotina de atendimento da interrupção 0
+;			  Faz o fantasma mover-se
+; *****************************************************************************************************************************
+rot_int_0:
+    PUSH R1
+    PUSH R2
+    MOV R1, [GHOST1_LIN]
+    MOV R2, [GHOST1_COL]
+    MOV R5, [PAC_LIN]
+    MOV R6, [PAC_COL]
+    CALL choose_ghost_direction ; chama a função que escolhe em que direção o fantasma se mexe
+    MOV R3, DEF_GHOST_ANIMATED  ; move o endereço da tabela que define a versão animada do fantasma para R3
+    MOV R4, DEF_GHOST           ; move o endereco da tabela que define o fantasma para R4
+    CALL	move_object		    ; chama a função que move o fantasma
+    MOV [GHOST1_LIN], R1
+    MOV [GHOST1_COL], R2
+    POP R2
+    POP R1
+    RFE					        ; Return From Exception
+
+; *****************************************************************************************************************************
+; CHOOSE_GHOST_DIRECTION - Rotina para determinar em que direção o fantasma se deve mover para se aproximar do pacman.
+;
+; Argumentos:   R1 - linha em que se encontra o fantasma
+;               R2 - coluna em que se encontra o fantasma
+;               R5 - linha em que se encontra o pacman
+;               R6 - coluna em que se encontra o pacman
+;
+; Retorna:      R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
+;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
+; *****************************************************************************************************************************
+choose_ghost_direction:
+    CMP R5, R1
+    JLT up
+    JGT down
+    MOV R7, 0
+
+check_horizontal:
+    CMP R6, R2
+    JLT left
+    JGT right
+    MOV R8, 0
+    JMP leave_ghost_direction
+
+    up:
+    MOV R7, -1
+    JMP check_horizontal
+    
+    down:
+    MOV R7, 1
+    JMP check_horizontal
+
+    left:
+    MOV R8, -1
+    JMP leave_ghost_direction
+
+    right:
+    MOV R8, 1
+    JMP leave_ghost_direction
+
+leave_ghost_direction:
     RET
