@@ -11,7 +11,7 @@
 ; *****************************************************************************************************************************
 TRUE                   EQU 1           ; valor numérico para representar TRUE (1)
 FALSE                  EQU 0           ; valor numérico para representar FALSE (0)
-DELAY                  EQU 5000H       ; numero de ciclos de delay para atrasar o movimento
+DELAY                  EQU 05000H       ; numero de ciclos de delay para atrasar a animação do movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 
 ; MediaCenter
@@ -248,6 +248,12 @@ DEF_BOX:     ; tabela que define a caixa onde nasce o pacman (altura, largura, p
     WORD        BLUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, BLUE                        ; #          #
     WORD        BLUE, BLUE, BLUE, BLUE, 0, 0, 0, 0, BLUE, BLUE, BLUE, BLUE      ; ####    ####   
 
+CHECK_IE:
+    WORD 0   ; observa chamadas da interrupção 0
+    WORD 0   ; observa chamadas da interrupção 1
+    WORD 0   ; observa chamadas da interrupção 2
+    WORD 0   ; observa chamadas da interrupção 3
+
 ; *****************************************************************************************************************************
 ; * Código
 ; *****************************************************************************************************************************
@@ -326,8 +332,8 @@ EI
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas
-    CMP R0, 0                           
-    JNZ main
+    CALL ghost_cicle
+    JMP main
 
 ; *****************************************************************************************************************************
 ; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
@@ -541,7 +547,8 @@ end_movement:
 ;
 ; *****************************************************************************************************************************
 keyboard:
-    PUSH R3                     ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R0
+    PUSH R3                     
     PUSH R4
     PUSH R5
     PUSH R6
@@ -549,16 +556,13 @@ keyboard:
     PUSH R8
     PUSH R9
     PUSH R10
-    PUSH R11
 
+    MOV R3, KEY_START_LINE  ; define a linha a ler (inicialmente a 1)
     MOV R0, 0                   ; inicializa R0 para guardar a tecla pressionada
     MOV R4, KEY_LIN             ; endereço do periférico das linhas do teclado
     MOV R5, KEY_COL             ; endereço do periférico das colunas do teclado
     MOV R7, MASK_TEC            ; máscara para a leitura do teclado
-
-    reset_line: 
-        MOV R3, KEY_START_LINE  ; define a linha a ler (inicialmente a 1)
-        MOV R9, 0               ; inicializa o contador de linhas a 0
+    MOV R9, 0               ; inicializa o contador de linhas a 0
 
     check_key:
         MOVB [R4], R3           ; ativa a linha para leitura do teclado
@@ -566,7 +570,6 @@ keyboard:
         AND R0, R7              ; aplica a máscara
         CMP R0, 0               ; verifica se alguma tecla foi pressionada
         JZ next_line            ; se nenhuma tecla foi pressionada, passa para a próxima linha
-        PUSH R0                 ; guarda a coluna pressionada
         MOV	R10, 0			    ; som com número 0
         MOV [PLAY_SOUND], R10   ; comando para tocar o som
         JMP is_key_pressed      ; caso contrário, espera que a tecla deixe de ser pressionada
@@ -576,26 +579,27 @@ keyboard:
         INC R9                  ; incrementa o contador de linhas
         CMP R9, 4               ; verifica se já leu todas as linhas
         JNZ check_key           ; se não leu todas as linhas, verifica a próxima
-        JMP reset_line          ; caso contrário, volta para a 1ª linha
+        JMP exit_keyboard
 
     is_key_pressed:
         CALL movement_key       ; chama uma função para detetar se a tecla pressionada é uma tecla de movimento
+        CALL ghost_cicle
         MOVB [R4], R3           ; ativa a linha para leitura do teclado
         MOVB R0, [R5]           ; lê a coluna do teclado
         AND R0, R7              ; aplica a máscara
         CMP R0, 0               ; verifica se a tecla foi libertada
         JNZ is_key_pressed      ; se não foi libertada, espera que seja
 
-    POP R0                      ; recupera a coluna pressionada
-    POP R11                     ; recupera os valores anteriores dos registos modificados
-    POP R10
-    POP R9
-    POP R8                      
-    POP R7
-    POP R6
-    POP R5
-    POP R4
-    POP R3
+    exit_keyboard:
+        POP R10
+        POP R9
+        POP R8                      
+        POP R7
+        POP R6
+        POP R5
+        POP R4
+        POP R3
+        POP R0
     RET
 
 ; *****************************************************************************************************************************
@@ -723,24 +727,58 @@ delay_loop:
 
 ; *****************************************************************************************************************************
 ; ROT_INT_0 - Rotina de atendimento da interrupção 0
-;			  Faz o fantasma mover-se
+;			  Faz os fantasmas dançarem
 ; *****************************************************************************************************************************
 rot_int_0:
     PUSH R1
+    MOV R1, 1
+    MOV [CHECK_IE], R1
+    POP R1
+    RFE
+
+ghost_cicle:
+    PUSH R0
+    PUSH R1
+    MOV R1, 1
+    MOV R0, [CHECK_IE]
+    CMP R0, 1
+    JNZ exit_ghost_cicle
+
+    MOV R0, 0
+    MOV [CHECK_IE], R0
+    CALL ghost1
+
+    exit_ghost_cicle:
+        POP R1
+        POP R0
+        RET
+
+ghost1:
+    PUSH R1
     PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+
     MOV R1, [GHOST1_LIN]
     MOV R2, [GHOST1_COL]
     MOV R5, [PAC_LIN]
     MOV R6, [PAC_COL]
     CALL choose_ghost_direction ; chama a função que escolhe em que direção o fantasma se mexe
-    MOV R3, DEF_GHOST_ANIMATED  ; move o endereço da tabela que define a versão animada do fantasma para R3
-    MOV R4, DEF_GHOST           ; move o endereco da tabela que define o fantasma para R4
-    CALL	move_object		    ; chama a função que move o fantasma
+    MOV R3, DEF_GHOST           ; move o endereço da tabela que define a versão animada do fantasma para R3
+    MOV R4, R3                  ; move o endereco da tabela que define o fantasma para R4
+    CALL move_object		    ; chama a função que move o fantasma
     MOV [GHOST1_LIN], R1
     MOV [GHOST1_COL], R2
+
+    POP R6
+    POP R5
+    POP R4
+    POP R3
     POP R2
     POP R1
-    RFE					        ; Return From Exception
+    RET				        ; Return From Exception
 
 ; *****************************************************************************************************************************
 ; CHOOSE_GHOST_DIRECTION - Rotina para determinar em que direção o fantasma se deve mover para se aproximar do pacman.
@@ -758,14 +796,8 @@ choose_ghost_direction:
     JLT up
     JGT down
     MOV R7, 0
-
-check_horizontal:
-    CMP R6, R2
-    JLT left
-    JGT right
-    MOV R8, 0
-    JMP leave_ghost_direction
-
+    JMP check_horizontal
+        
     up:
     MOV R7, -1
     JMP check_horizontal
@@ -774,13 +806,20 @@ check_horizontal:
     MOV R7, 1
     JMP check_horizontal
 
-    left:
-    MOV R8, -1
-    JMP leave_ghost_direction
+    check_horizontal:
+        CMP R6, R2
+        JLT left
+        JGT right
+        MOV R8, 0
+        JMP leave_ghost_direction
 
-    right:
-    MOV R8, 1
-    JMP leave_ghost_direction
+        left:
+        MOV R8, -1
+        JMP leave_ghost_direction
 
-leave_ghost_direction:
-    RET
+        right:
+        MOV R8, 1
+        JMP leave_ghost_direction
+
+    leave_ghost_direction:
+        RET
