@@ -15,6 +15,7 @@ DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar 
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 MAX_GHOSTS             EQU 4           ; número máximo de fantasmas premitidos em jogo (0-4)
 NUM_GHOSTS             EQU 3FE8H       ; endereço do número de fantasmas atualmente em jogo
+SCORE                  EQU 3FE6H       ; endereço da pontuação
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
@@ -65,7 +66,10 @@ KEY_COL                EQU 0E000H      ; endereço das colunas do teclado (perif
 KEY_START_LINE         EQU 1           ; inicialização da linha
 MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 
-; Contador
+; Pontuação
+INITIAL_POINTS         EQU 00H         ; valor inicial da pontuação
+UPPER_LIMIT            EQU 999H        ; valor máximo do contador de pontos
+LOWER_LIMIT            EQU 00H         ; valor mínimo do contador de pontos  
 MASK_LSD               EQU 0FH         ; máscara para isolar os 4 btis de menor peso para ver o digito menos significativo
 MASK_TENS              EQU 0F0H        ; máscara para isolar os bits que representam as dezenas
 
@@ -283,6 +287,9 @@ start:
     MOV [DELETE_FRONT_IMG], R0          ; apaga a imagem frontal (o valor de R0 não é relevante)
     MOV [DELETE_WARNING], R0	        ; apaga o aviso de nenhum cenário selecionado (o valor de R0 não é relevante)
     MOV [DELETE_SCREEN], R0	            ; apaga todos os pixels já desenhados (o valor de R0 não é relevante)
+    MOV R0, INITIAL_POINTS              ; guarda em R0 o valor da pontuação inicial (000)
+    MOV [DISPLAYS], R0                  ; move para os displays os valores inciais da pontuação (000)
+    MOV [SCORE], R0                     ; move para a memória o valor inicial de R0
     MOV R0, START_MENU_IMG              ; move para R0 o nº do cenário de fundo 
     MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo       
     MOV R0, PACMAN_THEME                ; guarda o nº do som da música do pacman
@@ -319,6 +326,7 @@ EI                                      ; ativar interrupções
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para indentificar as teclas pressionadas e executar os comandos às teclas associados
     CALL ghost_cycle                    ; chama a função que anima os fantasmas
+    CALL score_cycle
     JMP main
 
 ; *****************************************************************************************************************************
@@ -1060,7 +1068,7 @@ int_rot_0:
 
 ; *****************************************************************************************************************************
 ; INT_ROT_1 - Rotina de atendimento da interrupção 1
-;			  ???
+;			  Usada sinalizar que o contador tem de atualizado.
 ; *****************************************************************************************************************************
 int_rot_1:
     PUSH R1
@@ -1252,4 +1260,64 @@ choose_ghost_direction:
         JMP leave_ghost_direction
 
     leave_ghost_direction:
+        RET
+
+
+; *****************************************************************************************************************************
+; SCORE_CYCLE - ???
+;
+; *****************************************************************************************************************************
+score_cycle:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    
+    MOV R0, [int_1]             ; guarda em R0 o valor que indica a occurência da interrupção 1
+    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção occureu
+    JNZ exit_score_cycle        ; se não tiver occurido salta para o fim da rotina
+    MOV R0, SCORE               ; obtém o endereço da pontuação atual
+    MOV R1, [R0]                ; obtém o valor da pontuação atual
+    MOV R2, UPPER_LIMIT         ; obtém o valor do limite superior
+    CMP R1, R2                  ; determina se o valor atual é o limite superior
+    JZ exit_score_cycle         ; se for, sai da rotina, sem alterar a pontuação
+    ADD R1, 1                   ; caso contrário, incrementa a pontuação por 1
+    MOV R3, MASK_LSD            ; copia a máscara das unidades para R3
+    MOV R4, R1                  ; copia valor da pontuação para R4
+    AND R4, R3                  ; máscara para obter o digito menos significativo de R4
+    MOV R2, 0AH                 ; copia para R2 o valor hexadecimal A 
+    CMP R4, R2                  ; verifica se o digito menos significativo é 10 (hex 'A')
+    JZ skip_hex                 ; se sim salta para jump_hex que irá saltar à frente os valores A-F
+    MOV [DISPLAYS], R1          ; se não, atualiza o display
+    MOV [R0], R1                ; guarda o novo valor na memória
+    JMP exit_score_cycle        ; salta para o fim da rotina
+    
+    skip_hex:
+        ADD R1, 6               ; adiciona 6 ao contador para saltar os valores de A - F
+        MOV R3, MASK_TENS       ; copia a máscara das dezenas para R3
+        MOV R4, R1              ; copia o valor do contador para R4
+        AND R4, R3              ; aplica a máscara das dezenas
+        MOV R2, 0A0H            ; copia para R2 o valor hexadecimal 0A0H
+        CMP R4, R2              ; verifica se as dezenas estão a A
+        JZ jump_hundreds        ; se sim salta para jump_hundreds que irá incrementar para 256H que mostra 100 nos displays
+        MOV [DISPLAYS], R1      ; atualiza o display
+        MOV [R0], R1            ; guarda o novo valor na memória
+        JMP exit_score_cycle    ; salta para o fim da rotina
+
+    jump_hundreds:
+        MOV R3, 96              ; copia 96 para R3
+        ADD R1, R3              ; adiciona o valor de R3(96) a R1
+        MOV [DISPLAYS], R1      ; atualiza o display
+        MOV [R0], R1            ; guarda o novo valor na memória
+        JMP exit_score_cycle    ; salta para o fim da rotina
+
+    exit_score_cycle:
+        MOV R0, FALSE           ; guarda em R0 o valor FALSE (0)
+        MOV [int_0], R0         ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
+        POP R4
+        POP R3
+        POP R2
+        POP R1
+        POP R0
         RET
