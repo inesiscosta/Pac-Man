@@ -756,6 +756,7 @@ chose_object_action:
     ADD R1, R7                  ; soma à linha o valor do eventual movimento
     ADD R2, R8                  ; soma à coluna o valor do eventual movimento
     MOV R0, 1
+    MOV R10, BLUE
 
 check_horizontal_pixels:
     MOV R9, [R4+2]
