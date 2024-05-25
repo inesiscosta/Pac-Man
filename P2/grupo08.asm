@@ -971,62 +971,59 @@ game_state_key:
         POP R3
         RET
 
+
 ; *****************************************************************************************************************************
-; PAUSE_GAME - Pauses the game
-; To be implemented???
+; PAUSE_GAME - Pauses the game.
+; Atualiza o estado do jogo para PAUSED e seleciona um cenário frontal diferente para indicar visualmente que o jogo está em
+; pausa. Para além disso pausa todos os sons.
 ; *****************************************************************************************************************************
 pause_game:
     PUSH R1 
-    PUSH R2
-
-    MOV [PAUSE_ALL_SOUND], R1
-    MOV R1, PAUSED_IMG
-    MOV R2, SELECT_FRONT_IMG
-    MOV [R2], R1
-    MOV R1, PAUSED
-    MOV R2, GAME_STATE
-    MOV [R2], R1
-    
-    POP R2
+    DI                                      ; desativa interrupções
+    MOV [PAUSE_ALL_SOUND], R1               ; pausa a reprodução de todos os sons (o valor de R1 é irrelevante)          
+    MOV R1, PAUSED_IMG                      ; guarda em R1 o nº da imagem de pausa
+    MOV [SELECT_FRONT_IMG], R1              ; seleciona a imagem de pausa como o cenário frontal
+    MOV R1, PAUSED                          ; guarda em R1 o valor do estado de jogo PAUSED
+    MOV [GAME_STATE], R1                    ; atualiza o estado de jogo atual para PAUSED
     POP R1
     RET
 
 ; *****************************************************************************************************************************
-; RESUME_GAME - Resumes the game
+; RESUME_GAME - Resume o jogo.
+; Atualiza o estado do jogo para PLAYING e apaga o cenário frontal que diz PAUSED para indicar visualmente que o jogo saiu de
+; pausa. Para além disso resume a reprodução da música de fundo PACMAN THEME.
 ; *****************************************************************************************************************************
 resume_game:
-    PUSH R1 
-    PUSH R2
-    MOV R1, PAUSED_IMG
-    MOV R2, DELETE_FRONT_IMG
-    MOV [R2], R1
-    MOV R1, PLAYING
-    MOV R2, GAME_STATE
-    MOV [R2], R1
-    POP R2
+    PUSH R1
+    MOV R1, PACMAN_THEME                   ; guarda em R1 o nº do som PACMAN THEME
+    MOV [RESUME_SOUND], R1                 ; resume a reprodução do som PACMAN THEME
+    MOV R1, PAUSED_IMG                     ; guarda em R1 o nº da imagem de pausa
+    MOV [DELETE_FRONT_IMG], R1             ; apaga a imagem de pausa como cenário frontal
+    MOV R1, PLAYING                        ; guarda em R1 o valor do estado de jogo PLAYING
+    MOV [GAME_STATE], R1                   ; atualiza o estado de jogo atual para PLAYING
+    EI                                     ; ativa interrupções
     POP R1
     RET
 
 ; *****************************************************************************************************************************
-; END_GAME - Ends the game
+; END_GAME - Termina o jogo.
+; Atualiza o estado do jogo para GAME_OVER e muda o cenário de fundo para indicar visualmente que o jogo terminou. Toca o som
+; de GAME OVER. Para de aceitar interrupções
 ; *****************************************************************************************************************************
 end_game:
     PUSH R1
-    PUSH R2
-    DI0
-    DI
-    MOV R1, DELETE_SCREEN
-    MOV [R1], R2
-    MOV R1, LOOP_MEDIA
-    MOV R2, GHOSTS_GIF
-    MOV [R1], R2
-    MOV R1, GAME_OVER_IMG
-    MOV R2, SELECT_FRONT_IMG
-    MOV [R2], R1
-    MOV R1, GAME_OVER
-    MOV R2, GAME_STATE
-    MOV [R2], R1
-    POP R2
+    DI                                     ; desativa interrupções
+    DI0                                    ; desativa a interrupção a 0
+    DI1                                    ; desativa a interrupção a 1
+    DI2                                    ; desativa a interrupção a 2
+    DI3                                    ; desativa a interrupção a 3
+    MOV [DELETE_SCREEN], R1                ; apaga todos os pixels do ecrã (o valor de R1 é irrelevante)
+    MOV R1, GHOSTS_GIF                     ; guarda em R1 o nº do video GHOSTS_GIF
+    MOV [LOOP_MEDIA], R1                   ; reproduz em loop o video GHOSTS_GIF
+    MOV R1, GAME_OVER_IMG                  ; guarda em R1 o nº do cenário frontal GAME_OVER_IMG
+    MOV [SELECT_FRONT_IMG], R1             ; seleciona GAME_OVER_IMG como o cenário frontal
+    MOV R1, GAME_OVER                      ; guarda em R1 o valor do estado GAME_OVER
+    MOV [GAME_STATE], R1                   ; atualiza o estado atual do jogo para GAME_OVER
     POP R1
     RET
 
@@ -1050,7 +1047,7 @@ delay_loop:
 int_rot_0:
     PUSH R1
     MOV R1, 1
-    MOV [int_0], R1
+    MOV [int_0], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
@@ -1061,7 +1058,7 @@ int_rot_0:
 int_rot_1:
     PUSH R1
     MOV R1, 1
-    MOV [int_1], R1
+    MOV [int_1], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
@@ -1072,7 +1069,7 @@ int_rot_1:
 int_rot_2:
     PUSH R1
     MOV R1, 1
-    MOV [int_2], R1
+    MOV [int_2], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
@@ -1083,7 +1080,7 @@ int_rot_2:
 int_rot_3:
     PUSH R1
     MOV R1, 1
-    MOV [int_3], R1
+    MOV [int_3], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
