@@ -20,7 +20,9 @@ SCORE                  EQU 3FE6H       ; endereço da pontuação
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
 DEF_COLUMN   	       EQU 600CH       ; endereço do comando para definir a coluna
+DEF_COLOR              EQU 6014H       ; endereço do comando para definir a cor a usar
 DEF_PIXEL    	       EQU 6012H       ; endereço do comando para escrever um pixel
+DEF_8_PIXELS           EQU 601CH       ; endereço do comando para escrever em 8 pixels
 GET_PIXEL_COLOR        EQU 6010H       ; endereço do comando para obter a cor de um pixel
 DELETE_WARNING     	   EQU 6040H       ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 DELETE_SCREEN	 	   EQU 6002H       ; endereço do comando para apagar todos os pixels já desenhados
@@ -307,6 +309,8 @@ waiting_press_start:
 
 CALL draw_center_box                    ; quando o jogo começa (estado = PLAYING) chama a função draw_center_box para desenhar a caixa central
 
+CALL draw_limit_box                     ; chama a função para desenhar os limites do jogo
+
 CALL draw_candy                         ; chama a função para desenhar os rebuçados nos 4 cantos
 
 CALL spawn_ghosts                       ; chama a função para libertar fantasmas
@@ -409,6 +413,7 @@ init_ghost:
     MOV R4, DEF_GHOST                   ; endereço da tabela que define o fantasma
     CALL draw_object                    ; chama a função para desenhar o fantasma
     RET
+    
 ; *****************************************************************************************************************************
 ; DRAW_CANDY - Desenha os rebuçados nas poições definas na tabela DEF_CANDY_POSITIONS
 ;
@@ -500,6 +505,122 @@ draw_horizontal_lines:
     POP R2
     POP R1
     RET
+
+; *****************************************************************************************************************************
+; DRAW_LIMIT_BOX - Desenha os limites do jogo
+;
+; *****************************************************************************************************************************
+draw_limit_box:
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
+    MOV R1, 0                       ; guarda em r1 a linha que vamos começar a desenhar (limite superior do jogo)
+    MOV R2, 0                       ; guarda em r0 a coluna que vamos começar a desenhar
+    MOV R3, BLUE                    ; guarda em r3 a cor que vamos usar (azul)
+    MOV R4, 00FFH                   ; guarda em r4 O comando que pinta os 8 pixeis
+    MOV R5, 001FH                   ; guarda em r5 a linha inferior que vamos desenhar (limite inferior do jogo)
+    MOV R6, 08H                     ; guarda em r6 o valor que temos de incrementar no valor da coluna cada vez que pintamos
+    MOV R7, 8                       ; guarda em r7 o contador que conta as vezes que temos de pintar
+    MOV [DEF_LINE], R1              ; seleciona a linha superior
+    MOV [DEF_COLUMN], R2            ; seleciona a coluna zero
+    MOV [DEF_COLOR], R3             ; seleciona a cor (azul) para pintar o pixel
+
+    next_horizontal_limit:          ; começa o ciclo de desenhar os limites horizontais
+        MOV [DEF_8_PIXELS], R4      ; pinta os próximos 8 pixeis com a cor selecionada
+        ADD R1, R5                  
+        MOV [DEF_LINE], R1          ; seleciona a linha inferior (limite limite em baixo)
+        MOV [DEF_8_PIXELS], R4      ; pinta os próximos 8 pixeis com a cor selecionada
+        SUB R1, R5
+        MOV [DEF_LINE], R1          ; seleciona de novo a linha superior (limite em cima)
+        SUB R7, 1                   ; decrementa o contador
+        JZ draw_vertical_limit      ; verifica se já fizemos as vezes necessários, se estiver saltamos para a função que desenha os limites verticais
+        ADD R2, R6                  ; se não seleciona a coluna a seguir aos 8 pixeis pintados
+        MOV [DEF_COLUMN], R2        ; define essa coluna 
+        JMP next_horizontal_limit   ; volta ao início do ciclo
+
+    draw_vertical_limit:            ; começa o ciclo de desenhar os limites verticais
+        MOV R1, 1                   ; guarda em r1 a linha que vamos começar a desenhar
+        MOV R2, 0                   ; guarda em r2 a coluna que vamos começar a desenhar (limite mais à esquerda do jogo)
+        MOV R4, 003FH               ; guarda em r4 a coluna mais à direita que vamos desenhar (limite mais à direita)
+        MOV R5, 0009H               ; guarda em r5 as vezes que vamos pintar em cada ciclo
+        MOV R6, 003DH               ; guarda em r6 o valor da coluna que temos desenhar o spwan dos fantasmas à direita
+        mov R7, 0020H               ; guarda em r7 a última linha que temos de desenhar + 1
+
+        next_vertical_limit:
+            CALL write_pixel        ; chama a função que pintar o pixel
+            ADD R2, R4              ; seleciona a coluna mais à direita
+            CALL write_pixel        ; chama a função que pintar o pixel
+            SUB R2, R4              ; seleciona a coluna mais à esquerda
+            ADD R1, 1               ; desce uma linha
+            CMP R1, R7              ; vê se já pintamos a última linha
+            JZ exit_draw_limit_box  ; se sim, saimos da função
+            CMP R1, R5              ; vemos se chegamos à linha que temos de desenhar os spawns dos fantasmas
+            JNZ next_vertical_limit ; se não chegamos, continuamos a desenhar
+            CALL draw_ghost_spawns  ; desenhamos a primeira parte do spwan dos fantasmas (esquerda cima)
+            ADD R2, R6              ; seleciona a coluna que começa a segunda parte do spawn
+            SUB R1, 2               ; seleciona a linha que começa a segunda parte do spawn
+            CALL draw_ghost_spawns  ; desenhamos a segunda parte do spwan dos fantasmas (direita cima)
+            SUB R2, R6              ; seleciona a coluna que começa a segunda parte do spawn
+            ADD R1, 7H              ; seleciona a linha que começa a segunda parte do spawn
+            CALL draw_ghost_spawns  ; desenhamos a terceira parte do spwan dos fantasmas (direita baixo)
+            ADD R2, R6              ; seleciona a coluna que começa a segunda parte do spawn
+            SUB R1, 2               ; seleciona a linha que começa a segunda parte do spawn
+            CALL draw_ghost_spawns  ; desenhamos a última parte do spwan dos fantasmas (esquerda baixo)
+            SUB R2, R6              ; voltamos para a primeira coluna para continuar a desenhar os limites verticais
+            JMP next_vertical_limit ; voltamos a desenhar o resto dos pixeis dos limites verticais
+        
+exit_draw_limit_box:
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
+; *****************************************************************************************************************************
+; DRAW_GHOST_SPAWNS - Desenha os spwans dos fantasmas
+;
+; *****************************************************************************************************************************
+draw_ghost_spawns:
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    MOV R4, R2
+
+    CALL write_pixel
+    ADD R2, 1
+    CALL write_pixel
+    ADD R2, 1
+    CALL write_pixel
+    ADD R1, 1
+    CMP R4, 0
+    JZ left_ghost_spwans
+    SUB R2, 2
+    CALL write_pixel
+    ADD R1, 1
+    JMP jump_left_spwans
+    
+    left_ghost_spwans:
+        CALL write_pixel
+        ADD R1, 1
+        SUB R2, 2
+
+    jump_left_spwans:
+        CALL write_pixel
+        ADD R2, 1
+        CALL write_pixel
+        ADD R2, 1
+        CALL write_pixel
+        POP R4
+        POP R3
+        POP R2
+        RET
 
 ; *****************************************************************************************************************************
 ; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
