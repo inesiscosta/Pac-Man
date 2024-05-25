@@ -23,18 +23,27 @@ GET_PIXEL_COLOR        EQU 6010H       ; endereço do comando para obter a cor d
 DELETE_WARNING     	   EQU 6040H       ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 DELETE_SCREEN	 	   EQU 6002H       ; endereço do comando para apagar todos os pixels já desenhados
 SELECT_BACKGROUND_IMG  EQU 6042H       ; endereço do comando para selecionar uma imagem de fundo
-PLAY_SOUND             EQU 605AH       ; endereço do comando para tocar som
-LOOP_PLAY_SOUND        EQU 605CH       ; endereço do comando para reproduzir o som ou video especificado em ciclo
+SELECT_FRONT_IMG       EQU 6046H       ; endereço do comando para selecionar uma imagem frontal
+DELETE_FRONT_IMG       EQU 6044H       ; endereço do comando para apagar o cenário frontal
+SELECT_MEDIA           EQU 6048H       ; endereco do comando para selecionar um som/video para os comandos seguintes
+PLAY_MEDIA             EQU 605AH       ; endereço do comando para tocar som
+LOOP_MEDIA             EQU 605CH       ; endereço do comando para reproduzir o som ou video especificado em ciclo
 PAUSE_SOUND            EQU 605EH       ; endereço do comando para pausar a reprodução do som ou video especificado
+PAUSE_ALL_SOUND        EQU 6062H       ; endereço do comando para pausar a reprodução de todos os sons ou videos
 RESUME_SOUND           EQU 6006H       ; endereço do comando para resumir a reprodução do som ou video especificado
-STOP_SOUND             EQU 6066H       ; endereço do comando para terminar a reprodução do som ou video especificado
+STOP_MEDIA             EQU 6066H       ; endereço do comando para terminar a reprodução do som ou video especificado
+STOP_ALL_MEDIA         EQU 6068H       ; endereço do comando para terminar a reprodução de todos os sons/videos
 
 ; Imagens
 START_MENU_IMG         EQU 0           ;
 GAME_BACKGROUND        EQU 1           ;
+PAUSED_IMG             EQU 2           ;
+GAME_OVER_IMG          EQU 3           ;
 
-; Sons
-PACMAN_CHOMP           EQU 0           ; som do pacman a movimentar-se
+; Sons / GIFs
+PACMAN_THEME           EQU 0           ; música do jogo
+PACMAN_CHOMP           EQU 1           ; som do pacman a movimentar-se
+GHOSTS_GIF             EQU 2           ; GIF GAME OVER
 
 ; Controlos
 UP_LEFT_KEY            EQU 11H         ; key 0 for moving up and left
@@ -280,7 +289,7 @@ start:
     MOV [DELETE_WARNING], R0	        ; apaga o aviso de nenhum cenário selecionado (o valor de R0 não é relevante)
     MOV [DELETE_SCREEN], R0	            ; apaga todos os pixels já desenhados (o valor de R0 não é relevante)
     MOV R0, GAME_BACKGROUND
-    MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo        
+    MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo    
 
     CALL draw_center_box
 
@@ -328,8 +337,8 @@ pacman_position:
     MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
     CALL draw_object                    ; chama a função para desenhar o pacman
 
-EI0
 EI
+EI0
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para ler as teclas pressionadas
@@ -337,10 +346,17 @@ main: ; ciclo principal
     JMP main
 
 start_menu:
+    MOV R0, GHOSTS_GIF
+    MOV [SELECT_MEDIA], R0
+    MOV [STOP_MEDIA], R0
+    MOV [STOP_ALL_MEDIA], R0
+    MOV [DELETE_FRONT_IMG], R0
     MOV [DELETE_WARNING], R0	        ; apaga o aviso de nenhum cenário selecionado (o valor de R0 não é relevante)
     MOV [DELETE_SCREEN], R0	            ; apaga todos os pixels já desenhados (o valor de R0 não é relevante)
     MOV R0, START_MENU_IMG              ; move para R0 o nº da imagem de fundo para o start_menu
     MOV [SELECT_BACKGROUND_IMG], R0     ; seleciona o cenário de fundo
+    MOV R0, PACMAN_THEME
+    MOV [LOOP_MEDIA], R0
     MOV R0, GAME_STATE
     MOV R1, INITIAL
     MOV [R0], R1
@@ -409,6 +425,7 @@ draw_horizontal_lines:
     POP R2
     POP R1
     RET
+
 ; *****************************************************************************************************************************
 ; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
 ; Argumentos:   R1 - linha
@@ -680,7 +697,7 @@ keyboard:
         CMP R0, 0               ; verifica se alguma tecla foi pressionada
         JZ next_line            ; se nenhuma tecla foi pressionada, passa para a próxima linha
         MOV	R10, 0			    ; som com número 0
-        MOV [PLAY_SOUND], R10   ; comando para tocar o som
+        MOV [PLAY_MEDIA], R10   ; comando para tocar o som
         JMP is_key_pressed      ; caso contrário, espera que a tecla deixe de ser pressionada
 
     next_line:
@@ -894,25 +911,55 @@ game_state_key:
 ; To be implemented???
 ; *****************************************************************************************************************************
 pause_game:
-    PUSH R1
+    PUSH R1 
+    PUSH R2
+    MOV [PAUSE_ALL_SOUND], R1
+    MOV R1, PAUSED_IMG
+    MOV R2, SELECT_FRONT_IMG
+    MOV [R2], R1
+    MOV R1, PAUSED
+    MOV R2, GAME_STATE
+    MOV [R2], R1
+    POP R2
     POP R1
     RET
 
 ; *****************************************************************************************************************************
 ; RESUME_GAME - Resumes the game
-; To be implemented???
 ; *****************************************************************************************************************************
 resume_game:
-    PUSH R1
+    PUSH R1 
+    PUSH R2
+    MOV R1, PAUSED_IMG
+    MOV R2, DELETE_FRONT_IMG
+    MOV [R2], R1
+    MOV R1, PLAYING
+    MOV R2, GAME_STATE
+    MOV [R2], R1
+    POP R2
     POP R1
     RET
 
 ; *****************************************************************************************************************************
 ; END_GAME - Ends the game
-; To be implemented???
 ; *****************************************************************************************************************************
 end_game:
     PUSH R1
+    PUSH R2
+    DI0
+    DI
+    MOV R1, DELETE_SCREEN
+    MOV [R1], R2
+    MOV R1, LOOP_MEDIA
+    MOV R2, GHOSTS_GIF
+    MOV [R1], R2
+    MOV R1, GAME_OVER_IMG
+    MOV R2, SELECT_FRONT_IMG
+    MOV [R2], R1
+    MOV R1, GAME_OVER
+    MOV R2, GAME_STATE
+    MOV [R2], R1
+    POP R2
     POP R1
     RET
 
@@ -929,7 +976,6 @@ delay_loop:
     POP R0                      ; recupera o valor de R0
     RET
 
-
 ; *****************************************************************************************************************************
 ; ROT_INT_0 - Rotina de atendimento da interrupção 0
 ;			  Faz os fantasmas dançarem
@@ -939,7 +985,7 @@ rot_int_0:
     MOV R1, 1
     MOV [CHECK_IE], R1
     POP R1
-    RFE
+    RFE                         ; Return From Exception
 
 ghost_cicle:
     PUSH R0
@@ -983,7 +1029,7 @@ ghost1:
     POP R3
     POP R2
     POP R1
-    RET				        ; Return From Exception
+    RET
 
 ; *****************************************************************************************************************************
 ; CHOOSE_GHOST_DIRECTION - Rotina para determinar em que direção o fantasma se deve mover para se aproximar do pacman.
