@@ -66,7 +66,7 @@ END_GAME_KEY           EQU 84H         ; key to terminate the game
 KEY_LIN                EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
 KEY_COL                EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
 KEY_START_LINE         EQU 1           ; inicialização da linha
-MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+MASK_KEY               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 
 ; Pontuação
 INITIAL_POINTS         EQU 00H         ; valor inicial da pontuação
@@ -93,18 +93,6 @@ CANDY3_LIN			   EQU  27         ; linha do 3º rebuçado
 CANDY3_COL		       EQU  1 		   ; coluna do 3º rebuçado
 CANDY4_LIN			   EQU  27         ; linha do 4º rebuçado
 CANDY4_COL		       EQU  59		   ; coluna do 4º rebuçado
-
-; Posições Atuais
-PAC_LIN                EQU 3FECH       ; endereco da memoria onde se encontra a linha atual do pacman
-PAC_COL                EQU 3FEEH       ; endereco da memoria onde se encontra a coluna atual do pacman
-GHOST1_LIN             EQU 3FF0H       ; endereco da memoria onde se encontra a linha atual do fantasma1
-GHOST1_COL             EQU 3FF2H       ; endereco da memoria onde se encontra a coluna atual do fantasma1
-GHOST2_LIN             EQU 3FF4H       ; endereco da memoria onde se encontra a linha atual do fantasma2
-GHOST2_COL             EQU 3FF6H       ; endereco da memoria onde se encontra a coluna atual do fantasma2
-GHOST3_LIN             EQU 3FF8H       ; endereco da memoria onde se encontra a linha atual do fantasma3
-GHOST3_COL             EQU 3FFAH       ; endereco da memoria onde se encontra a coluna atual do fantasma3
-GHOST4_LIN             EQU 3FFCH       ; endereco da memoria onde se encontra a linha atual do fantasma4
-GHOST4_COL             EQU 3FFEH       ; endereco da memoria onde se encontra a coluna atual do fantasma4
 
 ; Cores
 YLW                    EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
@@ -271,6 +259,21 @@ DEF_CANDY_POSITIONS:
     WORD        CANDY4_LIN
     WORD        CANDY4_COL
 
+NUM_GHOSTS:     WORD 0                  ; guarda o número de fantasmas em jogo
+SCORE:          WORD 0                  ; guarda a pontução do jogo
+
+; Posições Atuais
+PAC_LIN:        WORD PAC_START_LIN      ; guarda a linha atual do pacman, inicializada a PAC_START_LIN
+PAC_COL:        WORD PAC_START_COL      ; guarda a coluna atual do pacman, inicializada a PAC_START_COL
+GHOST1_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 1, inicializada a GHOST_START_LIN
+GHOST1_COL:     WORD GHOST1_START_COL   ; guarda a coluna atual do fantasma 1, inicializada a GHOST1_START_COL
+GHOST2_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 2, inicializada a GHOST_START_LIN
+GHOST2_COL:     WORD GHOST2_START_COL   ; guarda a coluna atual do fantasma 2, inicializada a GHOST2_START_COL
+GHOST3_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 3, inicializada a GHOST_START_LIN
+GHOST3_COL:     WORD GHOST3_START_COL   ; guarda a coluna atual do fantasma 3, inicializada a GHOST3_START_COL
+GHOST4_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 4, inicializada a GHOST_START_LIN
+GHOST4_COL:     WORD GHOST4_START_COL   ; guarda a coluna atual do fantasma 4, inicializada a GHOST4_START_COL
+
 ; *****************************************************************************************************************************
 ; * Código
 ; *****************************************************************************************************************************
@@ -302,9 +305,8 @@ start:
 
 waiting_press_start:
     CALL keyboard                       ; chama a função do teclado para indentificar as teclas pressionadas e executar os comandos às teclas associados
-    MOV R1, PLAYING                     ; move para R1 o nº que representa o estado PLAYING
-    MOV R2, [R0]                        ; move para R2 o estado atual do jogo
-    CMP R1, R2                          ; compara o estado atual do jogo com o estado PLAYING
+    MOV R1, [GAME_STATE]                ; move para R1 o estado atual do jogo
+    CMP R1, PLAYING                     ; compara o estado atual do jogo com o estado PLAYING
     JNZ waiting_press_start             ; repete o ciclo enquanto o jogo não estiver PLAYING
 
 CALL draw_center_box                    ; quando o jogo começa (estado = PLAYING) chama a função draw_center_box para desenhar a caixa central
@@ -325,12 +327,12 @@ spawn_pacman:
     MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
     CALL draw_object                    ; chama a função para desenhar um objeto neste caso, o pacman
 
-EI                                      ; ativar interrupções
+EI                                      ; ativa interrupções
 
 main: ; ciclo principal
-    CALL keyboard                       ; chama a função do teclado para indentificar as teclas pressionadas e executar os comandos às teclas associados
     CALL ghost_cycle                    ; chama a função que anima os fantasmas
     CALL score_cycle
+    CALL keyboard                       ; chama a função do teclado para indentificar as teclas pressionadas e executar os comandos às teclas associados
     JMP main
 
 ; *****************************************************************************************************************************
@@ -351,41 +353,45 @@ spawn_ghosts:
     MOV R5, MAX_GHOSTS                  ; guarda o número máximo de fantasmas permitidos em jogo
     CMP R5, 0                           ; verifica se o número máximo de fantasmas permitidos é 0
     JZ spawn_ghosts_end                 ; se sim salta para o fim da rotina sem lançar nenhum fantasma
-    MOV R1, GHOST_START_LIN             ; se não, obtém o valor da linha inicial dos fantasmas
-    MOV R2, GHOST1_START_COL            ; valor da coluna inicial do fantasma 1
-    MOV R3, GHOST1_LIN                  ; endereço da linha atual do fantasma 1
-    MOV R4, GHOST1_COL                  ; endereço da coluna inicial do fantasma 1
-    CALL init_ghost                     ; chama a função que inicializa fantasmas
+    MOV R2, GHOST1_LIN                  ; se não, obtém o endereço da linha atual do fantasma 1
+    MOV R1, [R2]                        ; valor da linha atual do fantasma 1 (de momento igual à inicial)
+    MOV R3, GHOST1_COL                  ; endereço da coluna atual do fantasma 1
+    MOV R2, [R3]                        ; valor da linha atual do fantasma 1 (de momento igual à inicial)
+    MOV R4, DEF_GHOST                   ; tabale que define os fantasmas
+    CALL draw_object                    ; chama a função que desenha objetos neste caso o fantasma
     MOV R2, 1                           ; guarda o valor 1 pois 1 fantasma já foi libertado
-    MOV [R0], R2                         ; atualiza o número de fantasmas em jogo para 1
+    MOV [R0], R2                        ; atualiza o número de fantasmas em jogo para 1
 
     init_ghost_2:
         CMP R5, 1                       ; verifica se o número máximo de fantasmas permitidos é 1
         JZ spawn_ghosts_end             ; se sim salta para o fim da rotina sem lançar mais nenhum fantasma
-        MOV R2, GHOST2_START_COL        ; se não, obtém o valor da coluna inicial do fantasma 2
-        MOV R3, GHOST2_LIN              ; endereço da linha atual do fantasma 2
-        MOV R4, GHOST2_COL              ; endereço da coluna inicial do fantasma 2
-        CALL init_ghost                 ; chama a função que inicializa fantasmas
+        MOV R2, GHOST2_LIN              ; se não, obtém o endereço da linha atual do fantasma 2
+        MOV R1, [R2]                    ; valor da linha atual do fantasma 2 (de momento igual à inicial)
+        MOV R3, GHOST2_COL              ; endereço da coluna inicial do fantasma 2
+        MOV R2, [R3]                    ; valor da linha atual do fantasma 2 (de momento igual à inicial)
+        CALL draw_object                ; chama a função que desenha objetos neste caso o fantasma
         MOV R2, 2                       ; guarda o valor 2 pois 2 fantasmas já foram libertados
         MOV [R0], R2                    ; atualiza o número de fantasmas em jogo para 2
 
     init_ghost_3:
         CMP R5, 2                       ; verifica se o número máximo de fantasmas permitidos é 2
         JZ spawn_ghosts_end             ; se sim salta para o fim da rotina sem lançar mais nenhum fantasma
-        MOV R2, GHOST3_START_COL        ; se não, obtém o valor da coluna inicial do fantasma 3
-        MOV R3, GHOST3_LIN              ; endereço da linha atual do fantasma 3
-        MOV R4, GHOST3_COL              ; endereço da coluna inicial do fantasma 3
-        CALL init_ghost                 ; chama a função que inicializa fantasmas
+        MOV R2, GHOST3_LIN              ; se não, obtém o endereço da linha atual do fantasma 3
+        MOV R1, [R2]                    ; valor da linha atual do fantasma 3 (de momento igual à inicial)
+        MOV R3, GHOST3_COL              ; endereço da coluna inicial do fantasma 3
+        MOV R2, [R3]                    ; valor da linha atual do fantasma 3 (de momento igual à inicial)
+        CALL draw_object                ; chama a função que desenha objetos neste caso o fantasma
         MOV R2, 3                       ; guarda o valor 3 pois 3 fantasmas já foram libertados
-        MOV [R0], R2                     ; atualiza o número de fantasmas em jogo para 3
+        MOV [R0], R2                    ; atualiza o número de fantasmas em jogo para 3
 
     init_ghost_4:
         CMP R5, 3                       ; verifica se o número máximo de fantasmas permitidos é 3
         JZ spawn_ghosts_end             ; se sim salta para o fim da rotina sem lançar mais nenhum fantasma
-        MOV R2, GHOST4_START_COL        ; se não, obtém o valor da coluna inicial do fantasma 4
-        MOV R3, GHOST4_LIN              ; endereço da linha atual do fantasma 4
-        MOV R4, GHOST4_COL              ; endereço da coluna inicial do fantasma 4
-        CALL init_ghost                 ; chama a função que inicializa fantasmas
+        MOV R2, GHOST4_LIN              ; se não, obtém o endereço da linha atual do fantasma 4
+        MOV R1, [R2]                    ; valor da linha atual do fantasma 4 (de momento igual à inicial)
+        MOV R3, GHOST4_COL              ; endereço da coluna inicial do fantasma 4
+        MOV R2, [R3]                    ; valor da linha atual do fantasma 4 (de momento igual à inicial)
+        CALL draw_object                ; chama a função que desenha objetos neste caso o fantasma
         MOV R2, 4                       ; guarda o valor 4 pois 4 fantasmas já foram libertados
         MOV [R0], R2                    ; atualiza o número de fantasmas em jogo para 4
 
@@ -398,22 +404,6 @@ spawn_ghosts:
     POP R0
     RET
 
-; *****************************************************************************************************************************
-; INIT_GHOST - Inicializa um fantasma no programa
-; Argumentos: 
-;               R1 - linha inicial
-;               R2 - coluna inicial
-;               R3 - linha
-;               R4 - coluna
-;
-; *****************************************************************************************************************************
-init_ghost:
-    MOV [R3], R1                        ; guarda na RAM a linha atual do fantasma (de momento a inicial)
-    MOV [R4], R2                        ; guarda na RAM a coluna atual do fantasma (de momento a inicial)
-    MOV R4, DEF_GHOST                   ; endereço da tabela que define o fantasma
-    CALL draw_object                    ; chama a função para desenhar o fantasma
-    RET
-    
 ; *****************************************************************************************************************************
 ; DRAW_CANDY - Desenha os rebuçados nas poições definas na tabela DEF_CANDY_POSITIONS
 ;
@@ -681,14 +671,14 @@ draw_rows:
     POP R1
     RET
 
-; **********************************************************************
+; *****************************************************************************************************************************
 ; DELETE_OBJECT - Apaga um objeto na linha e coluna indicadas
 ;			      com a forma definida na tabela indicada.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
 ;               R4 - tabela que define o objeto
 ;
-; **********************************************************************
+; *****************************************************************************************************************************
 delete_object:
     PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
 	PUSH R2
@@ -815,15 +805,15 @@ not_over_limits:
     JMP exit_limit_tests
 
 exit_limit_tests:
-    POP     R11
-    POP     R10
-    POP     R9
-    POP     R8
-    POP     R7
-    POP     R6
-    POP     R5
-    POP     R2
-    POP     R1
+    POP R11
+    POP R10
+    POP R9
+    POP R8
+    POP R7
+    POP R6
+    POP R5
+    POP R2
+    POP R1
     RET
 
 ; *****************************************************************************************************************************
@@ -883,7 +873,7 @@ keyboard:
     MOV R0, 0                   ; inicializa R0 para guardar a tecla pressionada
     MOV R4, KEY_LIN             ; endereço do periférico das linhas do teclado
     MOV R5, KEY_COL             ; endereço do periférico das colunas do teclado
-    MOV R7, MASK_TEC            ; máscara para a leitura do teclado
+    MOV R7, MASK_KEY            ; máscara para a leitura do teclado
     MOV R9, 0                   ; inicializa o contador de linhas a 0
 
     check_key:
@@ -1104,62 +1094,59 @@ game_state_key:
         POP R3
         RET
 
+
 ; *****************************************************************************************************************************
-; PAUSE_GAME - Pauses the game
-; To be implemented???
+; PAUSE_GAME - Pauses the game.
+; Atualiza o estado do jogo para PAUSED e seleciona um cenário frontal diferente para indicar visualmente que o jogo está em
+; pausa. Para além disso pausa todos os sons.
 ; *****************************************************************************************************************************
 pause_game:
     PUSH R1 
-    PUSH R2
-
-    MOV [PAUSE_ALL_SOUND], R1
-    MOV R1, PAUSED_IMG
-    MOV R2, SELECT_FRONT_IMG
-    MOV [R2], R1
-    MOV R1, PAUSED
-    MOV R2, GAME_STATE
-    MOV [R2], R1
-    
-    POP R2
+    DI                                      ; desativa interrupções
+    MOV [PAUSE_ALL_SOUND], R1               ; pausa a reprodução de todos os sons (o valor de R1 é irrelevante)          
+    MOV R1, PAUSED_IMG                      ; guarda em R1 o nº da imagem de pausa
+    MOV [SELECT_FRONT_IMG], R1              ; seleciona a imagem de pausa como o cenário frontal
+    MOV R1, PAUSED                          ; guarda em R1 o valor do estado de jogo PAUSED
+    MOV [GAME_STATE], R1                    ; atualiza o estado de jogo atual para PAUSED
     POP R1
     RET
 
 ; *****************************************************************************************************************************
-; RESUME_GAME - Resumes the game
+; RESUME_GAME - Resume o jogo.
+; Atualiza o estado do jogo para PLAYING e apaga o cenário frontal que diz PAUSED para indicar visualmente que o jogo saiu de
+; pausa. Para além disso resume a reprodução da música de fundo PACMAN THEME.
 ; *****************************************************************************************************************************
 resume_game:
-    PUSH R1 
-    PUSH R2
-    MOV R1, PAUSED_IMG
-    MOV R2, DELETE_FRONT_IMG
-    MOV [R2], R1
-    MOV R1, PLAYING
-    MOV R2, GAME_STATE
-    MOV [R2], R1
-    POP R2
+    PUSH R1
+    MOV R1, PACMAN_THEME                   ; guarda em R1 o nº do som PACMAN THEME
+    MOV [RESUME_SOUND], R1                 ; resume a reprodução do som PACMAN THEME
+    MOV R1, PAUSED_IMG                     ; guarda em R1 o nº da imagem de pausa
+    MOV [DELETE_FRONT_IMG], R1             ; apaga a imagem de pausa como cenário frontal
+    MOV R1, PLAYING                        ; guarda em R1 o valor do estado de jogo PLAYING
+    MOV [GAME_STATE], R1                   ; atualiza o estado de jogo atual para PLAYING
+    EI                                     ; ativa interrupções
     POP R1
     RET
 
 ; *****************************************************************************************************************************
-; END_GAME - Ends the game
+; END_GAME - Termina o jogo.
+; Atualiza o estado do jogo para GAME_OVER e muda o cenário de fundo para indicar visualmente que o jogo terminou. Toca o som
+; de GAME OVER. Para de aceitar interrupções
 ; *****************************************************************************************************************************
 end_game:
     PUSH R1
-    PUSH R2
-    DI0
-    DI
-    MOV R1, DELETE_SCREEN
-    MOV [R1], R2
-    MOV R1, LOOP_MEDIA
-    MOV R2, GHOSTS_GIF
-    MOV [R1], R2
-    MOV R1, GAME_OVER_IMG
-    MOV R2, SELECT_FRONT_IMG
-    MOV [R2], R1
-    MOV R1, GAME_OVER
-    MOV R2, GAME_STATE
-    MOV [R2], R1
-    POP R2
+    DI                                     ; desativa interrupções
+    DI0                                    ; desativa a interrupção a 0
+    DI1                                    ; desativa a interrupção a 1
+    DI2                                    ; desativa a interrupção a 2
+    DI3                                    ; desativa a interrupção a 3
+    MOV [DELETE_SCREEN], R1                ; apaga todos os pixels do ecrã (o valor de R1 é irrelevante)
+    MOV R1, GHOSTS_GIF                     ; guarda em R1 o nº do video GHOSTS_GIF
+    MOV [LOOP_MEDIA], R1                   ; reproduz em loop o video GHOSTS_GIF
+    MOV R1, GAME_OVER_IMG                  ; guarda em R1 o nº do cenário frontal GAME_OVER_IMG
+    MOV [SELECT_FRONT_IMG], R1             ; seleciona GAME_OVER_IMG como o cenário frontal
+    MOV R1, GAME_OVER                      ; guarda em R1 o valor do estado GAME_OVER
+    MOV [GAME_STATE], R1                   ; atualiza o estado atual do jogo para GAME_OVER
     POP R1
     RET
 
@@ -1183,7 +1170,7 @@ delay_loop:
 int_rot_0:
     PUSH R1
     MOV R1, 1
-    MOV [int_0], R1
+    MOV [int_0], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
@@ -1194,7 +1181,7 @@ int_rot_0:
 int_rot_1:
     PUSH R1
     MOV R1, 1
-    MOV [int_1], R1
+    MOV [int_1], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
@@ -1205,7 +1192,7 @@ int_rot_1:
 int_rot_2:
     PUSH R1
     MOV R1, 1
-    MOV [int_2], R1
+    MOV [int_2], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
@@ -1216,7 +1203,7 @@ int_rot_2:
 int_rot_3:
     PUSH R1
     MOV R1, 1
-    MOV [int_3], R1
+    MOV [int_3], R1             ; sinaliza que a interrupção ocorreu
     POP R1
     RFE                         ; Return From Exception
 
