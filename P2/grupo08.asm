@@ -14,8 +14,6 @@ FALSE                  EQU 0           ; valor numérico para representar FALSE 
 DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar a animação do movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 MAX_GHOSTS             EQU 4           ; número máximo de fantasmas premitidos em jogo (0-4)
-NUM_GHOSTS             EQU 3FE8H       ; endereço do número de fantasmas atualmente em jogo
-SCORE                  EQU 3FE6H       ; endereço da pontuação
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
@@ -64,7 +62,7 @@ END_GAME_KEY           EQU 84H         ; key to terminate the game
 KEY_LIN                EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
 KEY_COL                EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
 KEY_START_LINE         EQU 1           ; inicialização da linha
-MASK_TEC               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+MASK_KEY               EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 
 ; Pontuação
 INITIAL_POINTS         EQU 00H         ; valor inicial da pontuação
@@ -91,18 +89,6 @@ CANDY3_LIN			   EQU  27         ; linha do 3º rebuçado
 CANDY3_COL		       EQU  1 		   ; coluna do 3º rebuçado
 CANDY4_LIN			   EQU  27         ; linha do 4º rebuçado
 CANDY4_COL		       EQU  59		   ; coluna do 4º rebuçado
-
-; Posições Atuais
-PAC_LIN                EQU 3FECH       ; endereco da memoria onde se encontra a linha atual do pacman
-PAC_COL                EQU 3FEEH       ; endereco da memoria onde se encontra a coluna atual do pacman
-GHOST1_LIN             EQU 3FF0H       ; endereco da memoria onde se encontra a linha atual do fantasma1
-GHOST1_COL             EQU 3FF2H       ; endereco da memoria onde se encontra a coluna atual do fantasma1
-GHOST2_LIN             EQU 3FF4H       ; endereco da memoria onde se encontra a linha atual do fantasma2
-GHOST2_COL             EQU 3FF6H       ; endereco da memoria onde se encontra a coluna atual do fantasma2
-GHOST3_LIN             EQU 3FF8H       ; endereco da memoria onde se encontra a linha atual do fantasma3
-GHOST3_COL             EQU 3FFAH       ; endereco da memoria onde se encontra a coluna atual do fantasma3
-GHOST4_LIN             EQU 3FFCH       ; endereco da memoria onde se encontra a linha atual do fantasma4
-GHOST4_COL             EQU 3FFEH       ; endereco da memoria onde se encontra a coluna atual do fantasma4
 
 ; Cores
 YLW                    EQU 0FFF0H	   ; cor do pixel: amarelo em ARGB (opaco, vermelho e verde no máximo, azul a 0)
@@ -269,6 +255,21 @@ DEF_CANDY_POSITIONS:
     WORD        CANDY4_LIN
     WORD        CANDY4_COL
 
+NUM_GHOSTS:     WORD 0                  ; guarda o número de fantasmas em jogo
+SCORE:          WORD 0                  ; guarda a pontução do jogo
+
+; Posições Atuais
+PAC_LIN:        WORD PAC_START_LIN      ; guarda a linha atual do pacman, inicializada a PAC_START_LIN
+PAC_COL:        WORD PAC_START_COL      ; guarda a coluna atual do pacman, inicializada a PAC_START_COL
+GHOST1_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 1, inicializada a GHOST_START_LIN
+GHOST1_COL:     WORD GHOST1_START_COL   ; guarda a coluna atual do fantasma 1, inicializada a GHOST1_START_COL
+GHOST2_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 2, inicializada a GHOST_START_LIN
+GHOST2_COL:     WORD GHOST2_START_COL   ; guarda a coluna atual do fantasma 2, inicializada a GHOST2_START_COL
+GHOST3_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 3, inicializada a GHOST_START_LIN
+GHOST3_COL:     WORD GHOST3_START_COL   ; guarda a coluna atual do fantasma 3, inicializada a GHOST3_START_COL
+GHOST4_LIN:     WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 4, inicializada a GHOST_START_LIN
+GHOST4_COL:     WORD GHOST4_START_COL   ; guarda a coluna atual do fantasma 4, inicializada a GHOST4_START_COL
+
 ; *****************************************************************************************************************************
 ; * Código
 ; *****************************************************************************************************************************
@@ -300,9 +301,8 @@ start:
 
 waiting_press_start:
     CALL keyboard                       ; chama a função do teclado para indentificar as teclas pressionadas e executar os comandos às teclas associados
-    MOV R1, PLAYING                     ; move para R1 o nº que representa o estado PLAYING
-    MOV R2, [R0]                        ; move para R2 o estado atual do jogo
-    CMP R1, R2                          ; compara o estado atual do jogo com o estado PLAYING
+    MOV R1, [GAME_STATE]                ; move para R1 o estado atual do jogo
+    CMP R1, PLAYING                     ; compara o estado atual do jogo com o estado PLAYING
     JNZ waiting_press_start             ; repete o ciclo enquanto o jogo não estiver PLAYING
 
 CALL draw_center_box                    ; quando o jogo começa (estado = PLAYING) chama a função draw_center_box para desenhar a caixa central
@@ -321,7 +321,7 @@ spawn_pacman:
     MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
     CALL draw_object                    ; chama a função para desenhar um objeto neste caso, o pacman
 
-EI                                      ; ativar interrupções
+EI                                      ; ativa interrupções
 
 main: ; ciclo principal
     CALL keyboard                       ; chama a função do teclado para indentificar as teclas pressionadas e executar os comandos às teclas associados
@@ -347,41 +347,44 @@ spawn_ghosts:
     MOV R5, MAX_GHOSTS                  ; guarda o número máximo de fantasmas permitidos em jogo
     CMP R5, 0                           ; verifica se o número máximo de fantasmas permitidos é 0
     JZ spawn_ghosts_end                 ; se sim salta para o fim da rotina sem lançar nenhum fantasma
-    MOV R1, GHOST_START_LIN             ; se não, obtém o valor da linha inicial dos fantasmas
-    MOV R2, GHOST1_START_COL            ; valor da coluna inicial do fantasma 1
-    MOV R3, GHOST1_LIN                  ; endereço da linha atual do fantasma 1
-    MOV R4, GHOST1_COL                  ; endereço da coluna inicial do fantasma 1
-    CALL init_ghost                     ; chama a função que inicializa fantasmas
+    MOV R2, GHOST1_LIN                  ; se não, obtém o endereço da linha atual do fantasma 1
+    MOV R1, [R2]                        ; valor da linha atual do fantasma 1 (de momento igual à inicial)
+    MOV R3, GHOST1_COL                  ; endereço da coluna atual do fantasma 1
+    MOV R2, [R3]                        ; valor da linha atual do fantasma 1 (de momento igual à inicial)
+    MOV R4, DEF_GHOST                   ; tabale que define os fantasmas
+    CALL draw_object                    ; chama a função que desenha objetos neste caso o fantasma
     MOV R2, 1                           ; guarda o valor 1 pois 1 fantasma já foi libertado
-    MOV [R0], R2                         ; atualiza o número de fantasmas em jogo para 1
+    MOV [R0], R2                        ; atualiza o número de fantasmas em jogo para 1
 
     init_ghost_2:
         CMP R5, 1                       ; verifica se o número máximo de fantasmas permitidos é 1
         JZ spawn_ghosts_end             ; se sim salta para o fim da rotina sem lançar mais nenhum fantasma
-        MOV R2, GHOST2_START_COL        ; se não, obtém o valor da coluna inicial do fantasma 2
-        MOV R3, GHOST2_LIN              ; endereço da linha atual do fantasma 2
-        MOV R4, GHOST2_COL              ; endereço da coluna inicial do fantasma 2
-        CALL init_ghost                 ; chama a função que inicializa fantasmas
+        MOV R2, GHOST2_LIN              ; se não, obtém o endereço da linha atual do fantasma 2
+        MOV R1, [R2]                    ; valor da linha atual do fantasma 2 (de momento igual à inicial)
+        MOV R3, GHOST2_COL              ; endereço da coluna inicial do fantasma 2
+        MOV R2, [R3]                    ; valor da linha atual do fantasma 2 (de momento igual à inicial)
+        CALL draw_object                ; chama a função que desenha objetos neste caso o fantasma
         MOV R2, 2                       ; guarda o valor 2 pois 2 fantasmas já foram libertados
         MOV [R0], R2                    ; atualiza o número de fantasmas em jogo para 2
 
     init_ghost_3:
         CMP R5, 2                       ; verifica se o número máximo de fantasmas permitidos é 2
         JZ spawn_ghosts_end             ; se sim salta para o fim da rotina sem lançar mais nenhum fantasma
-        MOV R2, GHOST3_START_COL        ; se não, obtém o valor da coluna inicial do fantasma 3
-        MOV R3, GHOST3_LIN              ; endereço da linha atual do fantasma 3
-        MOV R4, GHOST3_COL              ; endereço da coluna inicial do fantasma 3
-        CALL init_ghost                 ; chama a função que inicializa fantasmas
+        MOV R2, GHOST3_LIN              ; se não, obtém o endereço da linha atual do fantasma 3
+        MOV R1, [R2]                    ; valor da linha atual do fantasma 3 (de momento igual à inicial)
+        MOV R3, GHOST3_COL              ; endereço da coluna inicial do fantasma 3
+        MOV R2, [R3]                    ; valor da linha atual do fantasma 3 (de momento igual à inicial)
+        CALL draw_object                ; chama a função que desenha objetos neste caso o fantasma
         MOV R2, 3                       ; guarda o valor 3 pois 3 fantasmas já foram libertados
-        MOV [R0], R2                     ; atualiza o número de fantasmas em jogo para 3
+        MOV [R0], R2                    ; atualiza o número de fantasmas em jogo para 3
 
     init_ghost_4:
-        CMP R5, 3                       ; verifica se o número máximo de fantasmas permitidos é 3
         JZ spawn_ghosts_end             ; se sim salta para o fim da rotina sem lançar mais nenhum fantasma
-        MOV R2, GHOST4_START_COL        ; se não, obtém o valor da coluna inicial do fantasma 4
-        MOV R3, GHOST4_LIN              ; endereço da linha atual do fantasma 4
-        MOV R4, GHOST4_COL              ; endereço da coluna inicial do fantasma 4
-        CALL init_ghost                 ; chama a função que inicializa fantasmas
+        MOV R2, GHOST4_LIN              ; se não, obtém o endereço da linha atual do fantasma 4
+        MOV R1, [R2]                    ; valor da linha atual do fantasma 4 (de momento igual à inicial)
+        MOV R3, GHOST4_COL              ; endereço da coluna inicial do fantasma 4
+        MOV R2, [R3]                    ; valor da linha atual do fantasma 4 (de momento igual à inicial)
+        CALL draw_object                ; chama a função que desenha objetos neste caso o fantasma
         MOV R2, 4                       ; guarda o valor 4 pois 4 fantasmas já foram libertados
         MOV [R0], R2                    ; atualiza o número de fantasmas em jogo para 4
 
@@ -394,21 +397,6 @@ spawn_ghosts:
     POP R0
     RET
 
-; *****************************************************************************************************************************
-; INIT_GHOST - Inicializa um fantasma no programa
-; Argumentos: 
-;               R1 - linha inicial
-;               R2 - coluna inicial
-;               R3 - linha
-;               R4 - coluna
-;
-; *****************************************************************************************************************************
-init_ghost:
-    MOV [R3], R1                        ; guarda na RAM a linha atual do fantasma (de momento a inicial)
-    MOV [R4], R2                        ; guarda na RAM a coluna atual do fantasma (de momento a inicial)
-    MOV R4, DEF_GHOST                   ; endereço da tabela que define o fantasma
-    CALL draw_object                    ; chama a função para desenhar o fantasma
-    RET
 ; *****************************************************************************************************************************
 ; DRAW_CANDY - Desenha os rebuçados nas poições definas na tabela DEF_CANDY_POSITIONS
 ;
@@ -560,14 +548,14 @@ draw_rows:
     POP R1
     RET
 
-; **********************************************************************
+; *****************************************************************************************************************************
 ; DELETE_OBJECT - Apaga um objeto na linha e coluna indicadas
 ;			      com a forma definida na tabela indicada.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
 ;               R4 - tabela que define o objeto
 ;
-; **********************************************************************
+; *****************************************************************************************************************************
 delete_object:
     PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
 	PUSH R2
@@ -694,15 +682,15 @@ not_over_limits:
     JMP exit_limit_tests
 
 exit_limit_tests:
-    POP     R11
-    POP     R10
-    POP     R9
-    POP     R8
-    POP     R7
-    POP     R6
-    POP     R5
-    POP     R2
-    POP     R1
+    POP R11
+    POP R10
+    POP R9
+    POP R8
+    POP R7
+    POP R6
+    POP R5
+    POP R2
+    POP R1
     RET
 
 ; *****************************************************************************************************************************
@@ -762,7 +750,7 @@ keyboard:
     MOV R0, 0                   ; inicializa R0 para guardar a tecla pressionada
     MOV R4, KEY_LIN             ; endereço do periférico das linhas do teclado
     MOV R5, KEY_COL             ; endereço do periférico das colunas do teclado
-    MOV R7, MASK_TEC            ; máscara para a leitura do teclado
+    MOV R7, MASK_KEY            ; máscara para a leitura do teclado
     MOV R9, 0                   ; inicializa o contador de linhas a 0
 
     check_key:
