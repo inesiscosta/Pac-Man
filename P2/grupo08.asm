@@ -1526,7 +1526,7 @@ score_cycle:
 
     exit_score_cycle:
         MOV R0, FALSE           ; guarda em R0 o valor FALSE (0)
-        MOV [int_0], R0         ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
+        MOV [int_1], R0         ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
         POP R4
         POP R3
         POP R2
