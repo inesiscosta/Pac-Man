@@ -508,7 +508,7 @@ delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
     RET
 
 ; *****************************************************************************************************************************
-; MOVE_OBJECT - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
+; MOVE_OBJECT - Move um objeto de forma animada.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
 ;               R3 - tabela que define o objeto
@@ -1653,7 +1653,7 @@ choose_ghost_direction:
         RET
 
 ; *****************************************************************************************************************************
-; MOVE_PACMAN - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
+; MOVE_PACMAN - Move o Pacman de forma animada.
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
 ;               R3 - tabela que define o pacman
