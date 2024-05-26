@@ -1034,6 +1034,7 @@ movement_key:
     PUSH R1                         ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R2
     PUSH R4
+    PUSH R5
     PUSH R7
     PUSH R8
 
@@ -1122,6 +1123,22 @@ move:
     no_sound:
         MOV R1, [PAC_LIN]               ; guarda em R1 a linha atual do pacman
         MOV R2, [PAC_COL]               ; guarda em R2 a coluna atual do pacman
+        MOV R5, 64
+        CMP R2, R5                      ; verifica se a pacman ultrapassou o ecrã no lado direito
+        JZ tunnel_right                 ; se sim, coloca o pacman no lado esquerdo
+        MOV R5, -5
+        CMP R2, R5                      ; verifica se o pacman ultrapassou o ecrã no lado esquerdo
+        JZ tunnel_left                  ; se sim, coloca o pacman no lado direito
+        JMP end_tunnel
+
+        tunnel_right: 
+            MOV R2, -4                  ; coloca o pacman na esquerda
+            JMP end_tunnel              
+        
+        tunnel_left:
+            MOV R2, 63                  ; coloca o pacman na direita
+
+        end_tunnel:
         MOV R4, DEF_PACMAN              ; move para R4 a tabela que define o pacman de boca fechada
         CALL move_object                ; chama a função move_object
         MOV [PAC_LIN], R1               ; atualiza a linha atual do pacman
@@ -1130,6 +1147,7 @@ move:
 end_move:
     POP R8                          ; recupera os valores anteriores dos registos modificados
     POP R7
+    POP R5
     POP R4
     POP R2
     POP R1
