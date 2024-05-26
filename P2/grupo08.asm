@@ -508,7 +508,7 @@ delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
     RET
 
 ; *****************************************************************************************************************************
-; MOVE_OBJECT - Move um objeto de forma animada.
+; MOVE_OBJECT - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
 ; Argumentos:   R1 - linha
 ;               R2 - coluna
 ;               R3 - tabela que define o objeto
@@ -517,16 +517,17 @@ delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
 ;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
 ;
 ; Retorna:      R1 - novo valor da linha, após o movimento
-;               R2 - novo valor da coluna, após o movimento
 ; *****************************************************************************************************************************
 move_object:
     PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R6
     PUSH R9
 
-    CALL choose_object_action   ; chama a função que verifica que tipo de movimento o objeto está a tentar ultrapassar algum limite com este movimento
-    CMP R0, FALSE               ; compara o retorno da função (R0) com o valor para FALSE
-    JZ end_movement             ; se a função retornar false, saltamos para end_movement pois o movimento é proíbido
+    CALL choose_ghost_action    ; chama a função que verifica que tipo de movimento o objeto está a tentar ultrapassar algum limite com este movimento
+    CMP R0, 0                   ; compara o retorno da função (R0) com o valor 0
+    JZ end_movement             ; se a função retornar 0, saltamos para end_movement pois o movimento é proíbido
+    CMP R0, 2   
+    JZ ghost_pacman
     CALL delete_object          ; se não, apaga o objeto
     ADD R1, R7                  ; obtém nova linha
     ADD R2, R8                  ; obtém nova coluna
@@ -536,6 +537,10 @@ move_object:
     MOV R4, R3                  ; guarda em R4 a tabela de define o objeto (versão não animada)
     CALL draw_object            ; desenha versão final do objeto
     CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
+    JMP end_movement
+
+ghost_pacman:
+    CALL explosion
 
 end_movement:
     POP R9                      ; recupera os valores anteriores dos registos modificados
@@ -755,9 +760,9 @@ draw_candy:
 
 ; *****************************************************************************************************************************
 ; CHOOSE_OBJECT_ACTION - Verifica qual ação que o objeto irá realizar
-; Argumentos:	R1 - linha em que o objeto se encontra
+; Argumentos:   R1 - linha em que o objeto se encontra
 ;               R2 - coluna em que o objeto se encontra
-;			    R4 - tabela que define o objeto
+;               R4 - tabela que define o objeto
 ;               R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
 ;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
 ;
@@ -765,10 +770,7 @@ draw_candy:
 ;               0 - movimento proíbido
 ;               1 - pode mover
 ;               2 - pode mover e encontra um candy
-;               3 - pode mover e encontra o ghost L_BLUE
-;               4 - pode mover e encontra o ghost L_RED
-;               5 - pode mover e encontra o ghost ORANGE
-;               6 - pode mover e encontra o ghost PINK
+;               3 - pode mover e encontra um fantasma
 ;
 ; *****************************************************************************************************************************
 choose_object_action:
@@ -851,20 +853,124 @@ exit_choose_object_action:
     POP R1
     RET
 
+;*****************************************************************************************************************************
+; CHOOSE_GHOST_ACTION - Verifica qual ação que o objeto irá realizar
+; Argumentos:	R1 - linha em que o objeto se encontra
+;               R2 - coluna em que o objeto se encontra
+;			    R4 - tabela que define o objeto
+;               R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
+;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
+;
+; Retorna: R0 - Retorna o valor da ação que o objeto terá:
+;               0 - movimento proíbido
+;               1 - pode mover
+;               2 - pode mover e encontra o pacman
+;
 ; *****************************************************************************************************************************
-; IDENTIFY_ACTION - Identifica a ação a ação do pacman.
+choose_ghost_action:
+    PUSH R1                             ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+    PUSH R10
+    PUSH R11
+
+    MOV R5, [R4]                        ; obtém a altura objeto
+    SUB R5, 1                           ; subtrai 1 à altura do objeto
+    MOV R6, [R4+2]                      ; obtém a largura objeto     
+    SUB R6, 1                           ; subtrai 1 à largura do objeto
+    ADD R1, R7                          ; soma à linha o valor do eventual movimento
+    ADD R2, R8                          ; soma à coluna o valor do eventual movimento
+    MOV R0, 1                           ; 
+    MOV R10, BLUE                       ; guarda em R10 a cor BLUE (cor dos limites)
+    MOV R11, YLW                        ; guarda em R11 a cor YLW  (cor do pacmans)
+
+check_horizontal_ghost:
+    MOV R9, [R4+2]                      ;
+    next_horizontal_ghost:
+        CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
+        CMP R3, R10                     ; verifica se o pixel é azul
+        JZ ghost_over_limit             ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
+        CMP R3, R11
+        JZ caught_pacman
+
+        ADD R1, R5                      ; adiciona a altura - 1 à linha corrente
+        CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
+        CMP R3, R10                     ; verifica se o pixel é azul
+        JZ ghost_over_limit             ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
+        CMP R3, R11
+        JZ caught_pacman
+
+        SUB R1, R5                      ; recupera a linha inicial
+        SUB R9, 1                       ; decrementa ????? (NUNO)
+        JZ check_vertical_ghost         ; se já chegou a 0 salta para check_vertical_pixels
+        ADD R2, 1                       ; se não, passa para a próxima linha
+        JMP next_horizontal_ghost       ; repete o ciclo
+
+check_vertical_ghost:
+    MOV R9, [R4]                        ; guarda em R9 a altura do objeto
+    next_vertical_ghost:
+        CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
+        CMP R3, R10                     ; verifica se o pixel é azul
+        JZ ghost_over_limit             ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
+        CMP R3, R11
+        JZ caught_pacman
+
+        SUB R2, R6
+        CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
+        CMP R3, R10                     ; verifica se o pixel é azul
+        JZ ghost_over_limit             ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
+        CMP R3, R11
+        JZ caught_pacman
+
+        ADD R2, R6                      ;
+        SUB R9, 1                       ;
+        JZ ghost_not_over_limit         ; se já chegou a 0 salta para not_over_limit
+        ADD R1, 1                       ; se não, passa para a próxima coluna
+        JMP next_vertical_ghost         ; repete o ciclo
+
+caught_pacman:
+    MOV R0, 2
+    JMP exit_choose_ghost_action
+
+ghost_over_limit:
+    MOV R0, 0                           ; como o objeto está a tentar mover-se para cima de um limite guardamos 0 em R0 para indicar que o movimento é proíbido
+    JMP exit_choose_ghost_action        ; salta para o fim da rotina
+
+ghost_not_over_limit:
+    MOV R0, 1                           ; guarda em R0 o valor 1 (código que indica que o pacman se pode movimentar e não vai collidir com nada)
+    JMP exit_choose_ghost_action        ; salta para o fim da rotina
+
+exit_choose_ghost_action:
+    POP R11
+    POP R10                             ; recupera os valores anteriores dos registos modificados
+    POP R9
+    POP R8
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
+; *****************************************************************************************************************************
+; IDENTIFY_ACTION - Identifica a ação do pacman
 ; Atribui os códigos indentificadores de ação consoante a cor dos pixels que o pacman quer ocupar (descobre se vai colidir com um doce ou um fantasma)
 ; Argumentos:   R3 - cor do pixel
 ;
 ; Retorna:      R0 - código identificador de ação
 ;               0 - movimento proíbido
 ;               1 - pode mover
-;               2 - pode mover e encontra um candy
-;               3 - pode mover e encontra o ghost L_BLUE
-;               4 - pode mover e encontra o ghost L_RED
-;               5 - pode mover e encontra o ghost ORANGE
-;               6 - pode mover e encontra o ghost PINK
-; 
+;               2 - pode mover e encontrou um rebuçado
+;               3 - pode mover e encontrou um fantasma
+;
 ; *****************************************************************************************************************************
 identify_action:
     PUSH R1                         ; guarda os valores anteriores dos registos que são alterados nesta função
@@ -874,47 +980,35 @@ identify_action:
     PUSH R5
     PUSH R6
 
-    MOV R1, L_BLUE                   ; guarda em R1 o valor hexa que define a cor utilizada para o pixels verdes
-    MOV R2, L_RED                    ; guarda em R2 o valor hexa que define a cor utlizada para os pixels vermelhos
-    MOV R4, ORNG
-    MOV R5, PINK
-    MOV R6, RED
-    CMP R0, 2                       ; verifica se já apanhou um fantasma
-    JGT exit_identify_action        ; se sim, salta para o fim da rotina
+    MOV R1, L_BLUE                  ; guarda em R1 o valor hexa que define a cor utilizada para o pixels verdes
+    MOV R2, L_RED                   ; guarda em R2 o valor hexa que define a cor utlizada para os pixels vermelhos
+    MOV R4, ORNG                    ; guarda em R4 o valor hexa que define a cor utlizada para os pixels laranja
+    MOV R5, PINK                    ; guarda em R5 o valor hexa que define a cor utlizada para os pixels rosa
+    MOV R6, RED                     ; guarda em R6 o valor hexa que define a cor utlizada para os pixels vermelhos rebuçado
+    CMP R0, 3                       ; verifica se já apanhou um fantasma
+    JZ exit_identify_action         ; se sim, salta para o fim da rotina
     CMP R3, R1                      ; se não, verifica se o pixel selecionado é l_blue
-    JZ caught_ghost_l_blue          ; se sim, apanhou um fantasma e salta para caught_ghost_l_blue
+    JZ caught_ghost                 ; se sim, apanhou um fantasma e salta para caught_ghost
     CMP R3, R2                      ; se não, verifica se o pixel selecionado é l_red
-    JZ caught_ghost_l_red           ; se sim, apanhou um fantasma e salta para caught_ghost_l_red
+    JZ caught_ghost                 ; se sim, apanhou um fantasma e salta para caught_ghost
     CMP R3, R4                      ; se não, verifica se o pixel selecionado é orange
-    JZ caught_ghost_orange          ; se sim, apanhou um fantasma e salta para caught_ghost_orange
+    JZ caught_ghost                 ; se sim, apanhou um fantasma e salta para caught_ghost
     CMP R3, R5                      ; se não, verifica se o pixel selecionado é pink
-    JZ caught_ghost_pink            ; se sim, apanhou um fantasma e salta para caught_ghost_pink
+    JZ caught_ghost                 ; se sim, apanhou um fantasma e salta para caught_ghost
     CMP R3, R6                      ; se não, verifica se o pixel selecionado é red candy
     JZ caught_candy                 ; se sim, apanhou um doce e salta para caught_candy
     JMP exit_identify_action        ; repete o ciclo
 
-caught_ghost_l_blue:
-    MOV R0, 3                       ; guarda em R0 o valor 3, código que representa que encontrou o fantasma l_blue
-    JMP exit_identify_action        ; salta para o fim da rotina
-
-caught_ghost_l_red:
-    MOV R0, 4                       ; guarda em R0 o valor 4, código que representa que encontrou o fantasma l_red
-    JMP exit_identify_action        ; salta para o fim da rotina
-
-caught_ghost_orange:
-    MOV R0, 5                       ; guarda em R0 o valor 5, código que representa que encontrou o fantasma orange
-    JMP exit_identify_action        ; salta para o fim da rotina
-
-caught_ghost_pink:
-    MOV R0, 6                       ; guarda em R0 o valor 6, código que representa que encontrou o fantasma pink
+caught_ghost:
+    MOV R0, 3                       ; guarda em R0 o valor 3, código que representa que apanhou um fantasma
     JMP exit_identify_action        ; salta para o fim da rotina
 
 caught_candy:
-    MOV R0, 2                       ; guarda em R0 o valor 2, código que representa que apanhou um fantasma
+    MOV R0, 2                       ; guarda em R0 o valor 2, código que representa que apanhou um rebuçado
     JMP exit_identify_action        ; salta para o fim da rotina
 
 exit_identify_action:
-    POP R6                          ; recupera os valores anteriores dos registos modificados
+    POP R6                      ; recupera os valores anteriores dos registos modificados
     POP R5
     POP R4
     POP R3
@@ -1673,7 +1767,7 @@ move_pacman:
     CALL choose_object_action   ; chama a função que verifica se o pacman está a tentar ultrapassar algum limite com este movimento
     CMP R0, 0                   ; compara o retorno da função (R0) com o valor 0
     JZ end_pacman_movement      ; se a função retornar 0 então saltamos para end_movement pois o movimento é proíbido
-    CMP R0, 3
+    CMP R0, 3                   ;
     JLT check_pacman_candy
     CALL explosion
     JMP end_pacman_movement
@@ -1691,7 +1785,6 @@ check_pacman_candy:
     CALL victory
     skip_victory:
         MOV [REMAINING_CANDIES], R10
-        JMP new_position_pacman
 
 new_position_pacman:
     CALL delete_object          ; se não, apaga o pacman
@@ -1703,7 +1796,6 @@ new_position_pacman:
     MOV R4, R3                  ; move o valor de R3 para R4 para ser usado como argumento na função seguinte
     CALL draw_object            ; desenha versão final do pacman
     CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
-
 
 end_pacman_movement:
     POP R10
