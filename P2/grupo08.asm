@@ -15,6 +15,9 @@ DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar 
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 MAX_GHOSTS             EQU 4           ; número máximo de fantasmas premitidos em jogo (0-4)
 INITAL_NUM_GHOSTS      EQU 0           ; número de fantasmas inicalmente em jogo
+NUM_COL                EQU 64          ; número decimal do número de colunas no ecrã
+MIDDLE_LIN             EQU 10H         ; número hexadecimal para a linha a meio do ecrã
+MIDDLE_COL             EQU 20H         ; número hexadecimal para a coluna a meio do ecrã
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
@@ -77,6 +80,8 @@ UPPER_LIMIT            EQU 999H        ; valor máximo do contador de pontos
 LOWER_LIMIT            EQU 00H         ; valor mínimo do contador de pontos  
 MASK_LSD               EQU 0FH         ; máscara para isolar os 4 btis de menor peso para ver o digito menos significativo
 MASK_TENS              EQU 0F0H        ; máscara para isolar os bits que representam as dezenas
+INC_HUNDREDS           EQU 96          ; número para incrementar para representar as centenas no contador
+INC_TENS               EQU 6           ; número para incrementar para representar as dezenas no contador
 
 ; Posições Iniciais
 PAC_START_LIN          EQU 13          ; linha inicial do pacman (a meio do ecrã)
@@ -230,23 +235,23 @@ DEF_OPEN_PAC_DOWN_RIGHT:  ; tabela que define o pacman com a boca aberta para ba
     WORD		YLW, YLW, 0, 0, 0		                ; ##   
 	WORD		0, YLW, YLW, 0, 0	                    ;   ##
 
-DEF_L_BLUE_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
+DEF_L_BLUE_GHOST:   ; tabela que define o fantasma azul (altura, largura, pixels, cor)
     WORD        GHOST_HEIGHT
     WORD        GHOST_WIDTH
-    WORD        0, L_BLUE, L_BLUE, 0                      ;  ## 
-    WORD        L_BLUE, L_BLUE, L_BLUE, L_BLUE            ; ####
-    WORD        L_BLUE, L_BLUE, L_BLUE, L_BLUE            ; ####
-    WORD        L_BLUE, 0, 0, L_BLUE                      ; #  #
+    WORD        0, L_BLUE, L_BLUE, 0                    ;  ## 
+    WORD        L_BLUE, L_BLUE, L_BLUE, L_BLUE          ; ####
+    WORD        L_BLUE, L_BLUE, L_BLUE, L_BLUE          ; ####
+    WORD        L_BLUE, 0, 0, L_BLUE                    ; #  #
 
-DEF_L_RED_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
+DEF_L_RED_GHOST:   ; tabela que define o fantasma vermelho (altura, largura, pixels, cor)
     WORD        GHOST_HEIGHT
     WORD        GHOST_WIDTH
-    WORD        0, L_RED, L_RED, 0                       ;  ## 
-    WORD        L_RED, L_RED, L_RED, L_RED               ; ####
-    WORD        L_RED, L_RED, L_RED, L_RED               ; ####
-    WORD        L_RED, 0, 0, L_RED                       ; #  #
+    WORD        0, L_RED, L_RED, 0                      ;  ## 
+    WORD        L_RED, L_RED, L_RED, L_RED              ; ####
+    WORD        L_RED, L_RED, L_RED, L_RED              ; ####
+    WORD        L_RED, 0, 0, L_RED                      ; #  #
 
-DEF_ORNG_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
+DEF_ORNG_GHOST:   ; tabela que define o fantasma laranja (altura, largura, pixels, cor)
     WORD        GHOST_HEIGHT
     WORD        GHOST_WIDTH
     WORD        0, ORNG, ORNG, 0                        ;  ## 
@@ -254,7 +259,7 @@ DEF_ORNG_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
     WORD        ORNG, ORNG, ORNG, ORNG                  ; ####
     WORD        ORNG, 0, 0, ORNG                        ; #  #
 
-DEF_PINK_GHOST:   ; tabela que define o fantasma (altura, largura, pixels, cor)
+DEF_PINK_GHOST:   ; tabela que define o fantasma rosa (altura, largura, pixels, cor)
     WORD        GHOST_HEIGHT
     WORD        GHOST_WIDTH
     WORD        0, PINK, PINK, 0                        ;  ## 
@@ -279,15 +284,15 @@ DEF_EXPLOSION:   ; tabela que define a explosão (altura, largura, pixels, cor)
     WORD        0, CYAN, 0, CYAN, 0                     ;  # # 
     WORD        CYAN, 0, 0, 0, CYAN                     ; #   #
 
-DEF_CANDY_POSITIONS:
-    WORD        CANDY1_LIN
-    WORD        CANDY1_COL
-    WORD        CANDY2_LIN
-    WORD        CANDY2_COL
-    WORD        CANDY3_LIN
-    WORD        CANDY3_COL
-    WORD        CANDY4_LIN
-    WORD        CANDY4_COL
+DEF_CANDY_POSITIONS:    ; tabela que define as posições dos doçes
+    WORD        CANDY1_LIN              ; linha do rebuçado 1
+    WORD        CANDY1_COL              ; coluna do rebuçado 1
+    WORD        CANDY2_LIN              ; linha do rebuçado 2
+    WORD        CANDY2_COL              ; coluna do rebuçado 2
+    WORD        CANDY3_LIN              ; linha do rebuçado 3
+    WORD        CANDY3_COL              ; coluna do rebuçado 3
+    WORD        CANDY4_LIN              ; linha do rebuçado 4
+    WORD        CANDY4_COL              ; coluna do rebuçado 4
 
 REMAINING_CANDIES:    WORD 4            ; guarda o número de rebuçados em jogo
 NUM_GHOSTS:           WORD 0            ; guarda o número de fantasmas em jogo
@@ -302,24 +307,24 @@ PAC_LIN:        WORD PAC_START_LIN      ; guarda a linha atual do pacman, inicia
 PAC_COL:        WORD PAC_START_COL      ; guarda a coluna atual do pacman, inicializada a PAC_START_COL
 
 GHOST_POS:
-    WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 0, inicializada a GHOST_START_LIN
-    WORD GHOST0_START_COL   ; guarda a coluna atual do fantasma 0, inicializada a GHOST1_START_COL
-    WORD DEF_L_BLUE_GHOST   ; guarda a tabela do fantasma 0 (Light Blue Ghost)
-    WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 1, inicializada a GHOST_START_LIN
-    WORD GHOST1_START_COL   ; guarda a coluna atual do fantasma 1, inicializada a GHOST2_START_COL
-    WORD DEF_L_RED_GHOST    ; guarda a tabela do fantasma 1 (Light Red Ghost)
-    WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 2, inicializada a GHOST_START_LIN
-    WORD GHOST2_START_COL   ; guarda a coluna atual do fantasma 2, inicializada a GHOST3_START_COL
-    WORD DEF_ORNG_GHOST     ; guarda a tabela do fantasma 2 (Orange Ghost)
-    WORD GHOST_START_LIN    ; guarda a linha atual do fantasma 3, inicializada a GHOST_START_LIN
-    WORD GHOST3_START_COL   ; guarda a coluna atual do fantasma 3, inicializada a GHOST4_START_COL
-    WORD DEF_PINK_GHOST     ; guarda a tabela do fantasma 3 (Pink Ghost)
+    WORD GHOST_START_LIN                ; guarda a linha atual do fantasma 0, inicializada a GHOST_START_LIN
+    WORD GHOST0_START_COL               ; guarda a coluna atual do fantasma 0, inicializada a GHOST1_START_COL
+    WORD DEF_L_BLUE_GHOST               ; guarda a tabela do fantasma 0 (Light Blue Ghost)
+    WORD GHOST_START_LIN                ; guarda a linha atual do fantasma 1, inicializada a GHOST_START_LIN
+    WORD GHOST1_START_COL               ; guarda a coluna atual do fantasma 1, inicializada a GHOST2_START_COL
+    WORD DEF_L_RED_GHOST                ; guarda a tabela do fantasma 1 (Light Red Ghost)
+    WORD GHOST_START_LIN                ; guarda a linha atual do fantasma 2, inicializada a GHOST_START_LIN
+    WORD GHOST2_START_COL               ; guarda a coluna atual do fantasma 2, inicializada a GHOST3_START_COL
+    WORD DEF_ORNG_GHOST                 ; guarda a tabela do fantasma 2 (Orange Ghost)
+    WORD GHOST_START_LIN                ; guarda a linha atual do fantasma 3, inicializada a GHOST_START_LIN
+    WORD GHOST3_START_COL               ; guarda a coluna atual do fantasma 3, inicializada a GHOST4_START_COL
+    WORD DEF_PINK_GHOST                 ; guarda a tabela do fantasma 3 (Pink Ghost)
 
 ALIVE_GHOSTS:
-    WORD 0                  ; guarda 0 ou 1 para indicar se o fantasma 0 está vivo ou morto respetivamente, inicializado a 0
-    WORD 0                  ; guarda 0 ou 1 para indicar se o fantasma 1 está vivo ou morto respetivamente, inicializado a 0
-    WORD 0                  ; guarda 0 ou 1 para indicar se o fantasma 2 está vivo ou morto respetivamente, inicializado a 0
-    WORD 0                  ; guarda 0 ou 1 para indicar se o fantasma 3 está vivo ou morto respetivamente, inicializado a 0
+    WORD 0                              ; guarda 0 ou 1 para indicar se o fantasma 0 está vivo ou morto respetivamente, inicializado a 0
+    WORD 0                              ; guarda 0 ou 1 para indicar se o fantasma 1 está vivo ou morto respetivamente, inicializado a 0
+    WORD 0                              ; guarda 0 ou 1 para indicar se o fantasma 2 está vivo ou morto respetivamente, inicializado a 0
+    WORD 0                              ; guarda 0 ou 1 para indicar se o fantasma 3 está vivo ou morto respetivamente, inicializado a 0
 
 ; *****************************************************************************************************************************
 ; * Código
@@ -361,11 +366,8 @@ waiting_press_start:
     JNZ waiting_press_start             ; repete o ciclo enquanto o jogo não estiver PLAYING
 
 CALL draw_center_box                    ; quando o jogo começa (estado = PLAYING) chama a função draw_center_box para desenhar a caixa central
-
 CALL draw_limit_box                     ; chama a função para desenhar os limites do jogo
-
 CALL draw_candy                         ; chama a função para desenhar os rebuçados nos 4 cantos
-
 spawn_pacman:
     MOV R2, PAC_LIN                     ; endereço da linha atual do pacman
     MOV R1, PAC_START_LIN               ; valor da linha inicial do pacman
@@ -375,7 +377,6 @@ spawn_pacman:
     MOV [R3], R2                        ; guarda na RAM a coluna atual do pacman (de momento a inicial)
     MOV R4, DEF_OPEN_PAC_RIGHT          ; endereço da tabela que define o pacman
     CALL draw_object                    ; chama a função para desenhar um objeto neste caso, o pacman
-
 EI                                      ; ativa interrupções
 
 main: ; ciclo principal
@@ -390,11 +391,40 @@ main: ; ciclo principal
     JMP main
 
 ; *****************************************************************************************************************************
-; SPAWN_GHOSTS - Desenha os fantasmas consoante o número máximo de fantasmas permitidos
+; GET_COLOR_PIXEL - Vê a cor do pixel na linha e coluna indicadas.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;
+; Retorna:      R3 - cor do pixel (em formato ARGB de 16 bits)
+; *****************************************************************************************************************************
+get_color_pixel:
+    MOV [DEF_LINE], R1          ; seleciona a linha
+    MOV [DEF_COLUMN], R2        ; seleciona a coluna
+    MOV R3, [GET_COLOR]         ; identifica a cor do pixel na linha e coluna já selecionadas
+    RET 
+
+; *****************************************************************************************************************************
+; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R3 - cor do pixel (em formato ARGB de 16 bits)
 ;
 ; *****************************************************************************************************************************
-spawn_ghosts:
-    PUSH R1
+write_pixel:
+	MOV  [DEF_LINE], R1		    ; seleciona a linha
+	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
+	MOV  [DEF_PIXEL], R3		; altera a cor do pixel na linha e coluna já selecionadas
+	RET
+
+; *****************************************************************************************************************************
+; DRAW_OBJECT - Desenha o objeto na linha e coluna indicadas com a forma e cor definidas na tabela indicada.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R4 - tabela que define o objeto
+;
+; *****************************************************************************************************************************
+draw_object:
+    PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R2
     PUSH R3
     PUSH R4
@@ -402,54 +432,28 @@ spawn_ghosts:
     PUSH R6
     PUSH R7
     PUSH R8
-    PUSH R9
 
-    MOV R3, [NUM_GHOSTS]                    ; guarda o numero de fantasmas em jogo
-    MOV R5, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
-    CMP R3, R5                              ; verifica se já estamos no número máximo
-    JZ spawn_ghosts_end                     ; se sim, salta para o fim da rotina
-    MOV R8, 0                               ; vamos começar por ver o fantasma 0
-    for_max_ghosts:
-        CMP R5, 0                           ; verifica se já vimos todos os ghosts
-        JZ spawn_ghosts_end                 ; se já, saltamos para o fim da rotina
-        check_aliveness:
-            MOV R9, R8                      ; cria uma cópia de R8 que será editada
-            MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts
-            SHL R9, 1                       ; multiplica o valor de R9 por dois (2 porque WORD)
-            ADD R9, R1                      ; endereço do valor indentificador da "aliveness" do fantasma em questão
-            MOV R7, [R9]                    ; R7 guarda o valor indicador de se o fantasma está vivo
-            CMP R7, 1                       ; verifica se o fantasma está vivo
-            JZ next_ghost                   ; se estiver, vamos ver o próximo ghost
-            CALL pseudo_random              ; se não, chamamos a função para gerar um número aleatório entre 0 e 15 guardado em R0
-            CMP R6, 7                       ; verifica se o número aleatório é 3
-            JNZ next_ghost                  ; se não, vamos para o próximo fantasma
-            MOV R7, R8                      ; cria uma cópia de R8 que será alterada
-            MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar 
-            MUL R7, R4                      ; se for 3, obtemos a posição relativa ao topo da tabela GHOST_POS da linha do fantasma em causa
-            MOV R4, GHOST_POS               ; endereço da tabela ghost_pos
-            ADD R7, R4                      ; endereço da linha do fantasma em causa 
-            MOV R1, [R7]                    ; linha do fantasma em causa
-            ADD R7, 2                       ; endereço da coluna
-            MOV R2, [R7]                    ; coluna do fantasma em causa
-            ADD R7, 2                       ; endereço da tabela que define o fantasma em causa
-            MOV R4, [R7]                    ; guarda tabela que define o fantasma em causa em R4
-            CALL draw_object                ; função que desenha um objeto neste caso o fantasma
-            MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts 
-            MOV R9, R8                      ; cópia de R8
-            SHL R9, 1                       ; multiplica o valor de 98 por dois (2 porque WORD)
-            ADD R9, R1                      ; endereço do valor indentificador da "aliveness" do fantasma em questão
-            MOV R2, 1                       ; guarda em R2 o valor 1 que o fantasma estar vivo
-            MOV [R9], R2                    ; atualizamos o estado do ghost para alive
-            INC R3                          ; incrementa o número de alive ghosts
-        next_ghost:
-            INC R8                          ; próximo fantasma
-            DEC R5                          ; decrementa o valor de R3 para avançar o for loop
-            JMP for_max_ghosts              ; salta para o inicio do "for" loop
-    
-spawn_ghosts_end:
-    MOV [NUM_GHOSTS], R3                    ; guarda na memória o novo número de alive ghosts
-    POP R9
-    POP R8
+    MOV R5, [R4]                ; obtem altura do objeto 
+    ADD R4, 2                   ; endereço da largura do objeto
+    MOV R6, [R4]                ; obtem largura do objeto (nº colunas)
+    ADD R4, 2                   ; endereço da cor do 1º pixel
+    MOV R8, R2                  ; guarda a coluna inicial
+
+draw_rows:
+    MOV R7, R6                  ; contador linhas que faltam desenhar
+    MOV R2, R8                  ; reinicia a coluna
+    draw_pixels:
+        MOV R3, [R4]            ; obtém a cor do próximo pixel do objeto
+        CALL write_pixel        ; chama a função que desenha cada pixel do objeto
+        ADD R4, 2               ; obtem o endereço da cor do próximo pixel
+        ADD R2, 1               ; próxima coluna
+        SUB R7, 1               ; diminui contador do número de pixels que faltam desenhar nesta linha
+        JNZ draw_pixels
+    ADD R1, 1                   ; próxima linha
+    SUB R5, 1                   ; diminui contador do número de linhas que faltam desenhar
+    JNZ draw_rows               ; se ainda faltarem linhas repete o ciclo
+
+    POP R8                      ; recupera os valores anteriores dos registos modificados
     POP R7
     POP R6
     POP R5
@@ -460,32 +464,81 @@ spawn_ghosts_end:
     RET
 
 ; *****************************************************************************************************************************
-; DRAW_CANDY - Desenha os rebuçados nas poições definas na tabela DEF_CANDY_POSITIONS
+; DELETE_OBJECT - Apaga um objeto na linha e coluna indicadas
+;			      com a forma definida na tabela indicada.
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R4 - tabela que define o objeto
 ;
 ; *****************************************************************************************************************************
-draw_candy:
-    PUSH R0
-    PUSH R1
-    PUSH R2
-    PUSH R3
-    PUSH R4
+delete_object:
+    PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
+	PUSH R2
+	PUSH R3
+	PUSH R5
+    PUSH R6
+    PUSH R7
+    PUSH R8
 
-    MOV R0, DEF_CANDY_POSITIONS             ; guarda em R0 o endereço da tabela que contêm as posições (linha, coluna) dos 4 rebuçados
-    MOV R4, DEF_CANDY                       ; guarda em R4 a tabela que define cada rebuçado
-    MOV R3, 4                               ; R3 indica o nº de rebuçados que falta desenhar, inicalmente todos os 4
-    draw_each_candy:
-        MOV R1, [R0]                        ; obtem a linha do rebuçado que vai desenhar
-        ADD R0, 2                           ; avança para o endereço da coluna do rebuçado
-        MOV R2, [R0]                        ; obtem a coluna do rebuçado que vai desenhar
-        ADD R0, 2                           ; avança para o endereço da lina do rebuçado
-        CALL draw_object                    ; chama a função para desenhar o objeto (neste caso o rebuçado)
-        SUB R3, 1                           ; decrementa o número de rebuçados que faltam desenhar
-        JNZ draw_each_candy                 ; se ainda faltar desenhar rebuçados repete o ciclo draw_each_candy
-    
-    POP R4
+    MOV R5, [R4]                ; obtem a altura do objeto 
+    MOV R6, [R4+2]              ; obtem largura do objeto (nº colunas)
+    MOV R8, R2                  ; guarda a coluna inicial
+
+delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
+    MOV R7, R6                  ; contador linhas que falta apagar
+    MOV R2, R8                  ; reset para coluna inicial em cada nova linha
+    delete_pixels:
+        MOV	R3, 0	            ; cor para apagar o próximo pixel do objeto
+        CALL write_pixel        ; escreve cada pixel do objeto
+        ADD R2, 1               ; próxima coluna
+        SUB R7, 1		        ; menos uma coluna para tratar
+        JNZ delete_pixels       ; continua até percorrer toda a largura do objeto
+    ADD R1, 1                   ; proxima linha
+    SUB R5, 1                   ; diminui o contador do número de linhas que faltam apagar
+    JNZ delete_rows             ; se ainda faltar apagar linhas repete o ciclo
+
+    POP R8                      ; recupera os valores anteriores dos registos modificados
+    POP R7
+    POP R6
+    POP R5
     POP R3
     POP R2
     POP R1
+    RET
+
+; *****************************************************************************************************************************
+; MOVE_OBJECT - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R3 - tabela que define o objeto
+;               R4 - tabela que define a animação do objeto
+;               R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
+;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
+;
+; Retorna:      R1 - novo valor da linha, após o movimento
+;               R2 - novo valor da coluna, após o movimento
+; *****************************************************************************************************************************
+move_object:
+    PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R6
+    PUSH R9
+
+    CALL choose_object_action   ; chama a função que verifica que tipo de movimento o objeto está a tentar ultrapassar algum limite com este movimento
+    CMP R0, FALSE               ; compara o retorno da função (R0) com o valor para FALSE
+    JZ end_movement             ; se a função retornar false, saltamos para end_movement pois o movimento é proíbido
+    CALL delete_object          ; se não, apaga o objeto
+    ADD R1, R7                  ; obtém nova linha
+    ADD R2, R8                  ; obtém nova coluna
+    CALL draw_object            ; desenha versão animada do objeto
+    CALL delay                  ; chama uma função para atrasar/abrandar o movimento
+    CALL delete_object          ; apaga a versão animada do objeto
+    MOV R4, R3                  ; guarda em R4 a tabela de define o objeto (versão não animada)
+    CALL draw_object            ; desenha versão final do objeto
+    CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
+
+end_movement:
+    POP R9                      ; recupera os valores anteriores dos registos modificados
+    POP R6
     POP R0
     RET
 
@@ -562,6 +615,7 @@ draw_limit_box:
     PUSH R5
     PUSH R6
     PUSH R7
+
     MOV R1, 0                           ; guarda em R1 a linha que vamos começar a desenhar (limite superior do jogo)
     MOV R2, 0                           ; guarda em R0 a coluna que vamos começar a desenhar
     MOV R3, BLUE                        ; guarda em R3 a cor que vamos usar (azul)
@@ -591,7 +645,7 @@ draw_limit_box:
         MOV R2, 0                       ; guarda em R2 a coluna que vamos começar a desenhar (limite mais à esquerda do jogo)
         MOV R4, 003FH                   ; guarda em R4 a coluna mais à direita que vamos desenhar (limite mais à direita)
         MOV R5, 9                       ; guarda em R5 as vezes que vamos pintar em cada ciclo
-        MOV R6, 003DH                   ; guarda em R6 o valor da coluna que temos desenhar o spwan dos fantasmas à direita
+        MOV R6, 003DH                   ; guarda em R6 o valor da coluna que temos desenhar o spawn dos fantasmas à direita
         mov R7, 0020H                   ; guarda em R7 a última linha que temos de desenhar + 1
 
         next_vertical_limit:
@@ -604,16 +658,16 @@ draw_limit_box:
             JZ exit_draw_limit_box      ; se sim, saimos da função
             CMP R1, R5                  ; vemos se chegamos à linha que temos de desenhar os spawns dos fantasmas
             JNZ next_vertical_limit     ; se não chegamos, continuamos a desenhar
-            CALL draw_ghost_spawns      ; desenhamos a primeira parte do spwan dos fantasmas (esquerda cima)
+            CALL draw_ghost_spawns      ; desenhamos a primeira parte do spawn dos fantasmas (esquerda cima)
             ADD R2, R6                  ; seleciona a coluna que começa a segunda parte do spawn
             SUB R1, 2                   ; seleciona a linha que começa a segunda parte do spawn
-            CALL draw_ghost_spawns      ; desenhamos a segunda parte do spwan dos fantasmas (direita cima)
+            CALL draw_ghost_spawns      ; desenhamos a segunda parte do spawn dos fantasmas (direita cima)
             SUB R2, R6                  ; seleciona a coluna que começa a segunda parte do spawn
             ADD R1, 7H                  ; seleciona a linha que começa a segunda parte do spawn
-            CALL draw_ghost_spawns      ; desenhamos a terceira parte do spwan dos fantasmas (direita baixo)
+            CALL draw_ghost_spawns      ; desenhamos a terceira parte do spawn dos fantasmas (direita baixo)
             ADD R2, R6                  ; seleciona a coluna que começa a segunda parte do spawn
             SUB R1, 2                   ; seleciona a linha que começa a segunda parte do spawn
-            CALL draw_ghost_spawns      ; desenhamos a última parte do spwan dos fantasmas (esquerda baixo)
+            CALL draw_ghost_spawns      ; desenhamos a última parte do spawn dos fantasmas (esquerda baixo)
             SUB R2, R6                  ; voltamos para a primeira coluna para continuar a desenhar os limites verticais
             JMP next_vertical_limit     ; voltamos a desenhar o resto dos pixeis dos limites verticais
         
@@ -628,8 +682,8 @@ exit_draw_limit_box:
     RET
 
 ; *****************************************************************************************************************************
-; DRAW_GHOST_SPAWNS - Desenha os spwans dos fantasmas
-; Argumentos: NUNO FAZ A FUNCTION DESCRIPTION AQUI COM OS ARGUMENTOS E COMENTA ESTA FUNÇÃO
+; DRAW_GHOST_SPAWNS - Desenha os spawns dos fantasmas
+; Argumentos: NUNO INÊS FAZ A FUNCTION DESCRIPTION AQUI COM OS ARGUMENTOS E COMENTA ESTA FUNÇÃO
 ;
 ; *****************************************************************************************************************************
 draw_ghost_spawns:
@@ -638,7 +692,6 @@ draw_ghost_spawns:
     PUSH R4
     
     MOV R4, R2
-
     CALL write_pixel
     ADD R2, 1
     CALL write_pixel
@@ -646,130 +699,58 @@ draw_ghost_spawns:
     CALL write_pixel
     ADD R1, 1
     CMP R4, 0
-    JZ left_ghost_spwans
+    JZ left_ghost_spawns
     SUB R2, 2
     CALL write_pixel
     ADD R1, 1
-    JMP jump_left_spwans
+    JMP jump_left_spawns
     
-    left_ghost_spwans:
+    left_ghost_spawns:
         CALL write_pixel
         ADD R1, 1
         SUB R2, 2
 
-    jump_left_spwans:
+    jump_left_spawns:
+        CALL write_pixel       ; chama a função para desenhar o pixel
+        ADD R2, 1              ; avança
         CALL write_pixel
         ADD R2, 1
         CALL write_pixel
-        ADD R2, 1
-        CALL write_pixel
+        
         POP R4                  ; recupera os valores anteriores dos registos modificados
         POP R3
         POP R2
         RET
 
 ; *****************************************************************************************************************************
-; WRITE_PIXEL - Escreve um pixel na linha e coluna indicadas.
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;               R3 - cor do pixel (em formato ARGB de 16 bits)
+; DRAW_CANDY - Desenha os rebuçados nas poições definas na tabela DEF_CANDY_POSITIONS
 ;
 ; *****************************************************************************************************************************
-write_pixel:
-	MOV  [DEF_LINE], R1		    ; seleciona a linha
-	MOV  [DEF_COLUMN], R2	    ; seleciona a coluna
-	MOV  [DEF_PIXEL], R3		; altera a cor do pixel na linha e coluna já selecionadas
-	RET
-
-; *****************************************************************************************************************************
-; DRAW_OBJECT - Desenha o objeto na linha e coluna indicadas com a forma e cor definidas na tabela indicada.
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;               R4 - tabela que define o objeto
-;
-; *****************************************************************************************************************************
-draw_object:
-    PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
+draw_candy:
+    PUSH R0                                 ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R1
     PUSH R2
     PUSH R3
     PUSH R4
-    PUSH R5
-    PUSH R6
-    PUSH R7
-    PUSH R8
-    MOV R5, [R4]                ; obtem altura do objeto 
-    ADD R4, 2                   ; endereço da largura do objeto
-    MOV R6, [R4]                ; obtem largura do objeto (nº colunas)
-    ADD R4, 2                   ; endereço da cor do 1º pixel
-    MOV R8, R2                  ; guarda a coluna inicial
 
-draw_rows:
-    MOV R7, R6                  ; contador linhas que faltam desenhar
-    MOV R2, R8                  ; reinicia a coluna
-    draw_pixels:
-        MOV R3, [R4]            ; obtém a cor do próximo pixel do objeto
-        CALL write_pixel        ; chama a função que desenha cada pixel do objeto
-        ADD R4, 2               ; obtem o endereço da cor do próximo pixel
-        ADD R2, 1               ; próxima coluna
-        SUB R7, 1               ; diminui contador do número de pixels que faltam desenhar nesta linha
-        JNZ draw_pixels
-    ADD R1, 1                   ; próxima linha
-    SUB R5, 1                   ; diminui contador do número de linhas que faltam desenhar
-    JNZ draw_rows               ; se ainda faltarem linhas repete o ciclo
-
-    POP R8                      ; recupera os valores anteriores dos registos modificados
-    POP R7
-    POP R6
-    POP R5
-    POP R4
+    MOV R0, DEF_CANDY_POSITIONS             ; guarda em R0 o endereço da tabela que contêm as posições (linha, coluna) dos 4 rebuçados
+    MOV R4, DEF_CANDY                       ; guarda em R4 a tabela que define cada rebuçado
+    MOV R3, 4                               ; R3 indica o nº de rebuçados que falta desenhar, inicalmente todos os 4
+    draw_each_candy:
+        MOV R1, [R0]                        ; obtem a linha do rebuçado que vai desenhar
+        ADD R0, 2                           ; avança para o endereço da coluna do rebuçado
+        MOV R2, [R0]                        ; obtem a coluna do rebuçado que vai desenhar
+        ADD R0, 2                           ; avança para o endereço da lina do rebuçado
+        CALL draw_object                    ; chama a função para desenhar o objeto (neste caso o rebuçado)
+        SUB R3, 1                           ; decrementa o número de rebuçados que faltam desenhar
+        JNZ draw_each_candy                 ; se ainda faltar desenhar rebuçados repete o ciclo draw_each_candy
+    
+    POP R4                                  ; recupera os valores anteriores dos registos modificados
     POP R3
     POP R2
     POP R1
+    POP R0
     RET
-
-; *****************************************************************************************************************************
-; DELETE_OBJECT - Apaga um objeto na linha e coluna indicadas
-;			      com a forma definida na tabela indicada.
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;               R4 - tabela que define o objeto
-;
-; *****************************************************************************************************************************
-delete_object:
-    PUSH R1                     ; guarda os valores anteriores dos registos que são alterados nesta função
-	PUSH R2
-	PUSH R3
-	PUSH R5
-    PUSH R6
-    PUSH R7
-    PUSH R8
-
-    MOV R5, [R4]                ; obtem a altura do objeto 
-    MOV R6, [R4+2]              ; obtem largura do objeto (nº colunas)
-    MOV R8, R2                  ; guarda a coluna inicial
-
-delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
-    MOV R7, R6                  ; contador linhas que falta apagar
-    MOV R2, R8                  ; reset para coluna inicial em cada nova linha
-    delete_pixels:
-        MOV	R3, 0	            ; cor para apagar o próximo pixel do objeto
-        CALL write_pixel        ; escreve cada pixel do objeto
-        ADD R2, 1               ; próxima coluna
-        SUB R7, 1		        ; menos uma coluna para tratar
-        JNZ delete_pixels       ; continua até percorrer toda a largura do objeto
-    ADD R1, 1                   ; proxima linha
-    SUB R5, 1                   ; diminui o contador do número de linhas que faltam apagar
-    JNZ delete_rows             ; se ainda faltar apagar linhas repete o ciclo
-
-    POP R8                      ; recupera os valores anteriores dos registos modificados
-    POP R7
-    POP R6
-    POP R5
-    POP R3
-    POP R2
-    POP R1
-    RET
-
 
 ; *****************************************************************************************************************************
 ; CHOOSE_OBJECT_ACTION - Verifica qual ação que o objeto irá realizar
@@ -787,7 +768,7 @@ delete_rows:       	            ; desenha os pixels do objeto a partir da tabela
 ;               4 - pode mover e encontra o ghost L_RED
 ;               5 - pode mover e encontra o ghost ORANGE
 ;               6 - pode mover e encontra o ghost PINK
-; NUNO ADICIONA OS MISSING COMENTÁRIOS A ESTA FUNÇÃO DEPOIS APAGA ESTE TEXTO
+;
 ; *****************************************************************************************************************************
 choose_object_action:
     PUSH R1                             ; guarda os valores anteriores dos registos que são alterados nesta função
@@ -807,11 +788,11 @@ choose_object_action:
     SUB R6, 1                           ; subtrai 1 à largura do objeto
     ADD R1, R7                          ; soma à linha o valor do eventual movimento
     ADD R2, R8                          ; soma à coluna o valor do eventual movimento
-    MOV R0, 1                           ; 
+    MOV R0, 1                           ; guarda o valor 1 em R0 (por default assumimos que se pode mover)
     MOV R10, BLUE                       ; guarda em R10 a cor BLUE (cor dos limites)
 
 check_horizontal_pixels:
-    MOV R9, [R4+2]                      ;
+    MOV R9, [R4+2]                      ; guarda em R9 a altura do objeto
     next_horizontal_pixels:
         CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
         CMP R3, R10                     ; verifica se o pixel é azul
@@ -823,38 +804,38 @@ check_horizontal_pixels:
         JZ over_limit                   ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
         CALL identify_action            ; se não, chama a função que atribui os códigos de tipo de ação consoante a cor dos pixels que o pacman quer ocupar (descobre se vai colidir com um doce ou um fantasma)
         SUB R1, R5                      ; recupera a linha inicial
-        SUB R9, 1                       ; decrementa ????? (NUNO)
+        SUB R9, 1                       ; decrementa R9
         JZ check_vertical_pixels        ; se já chegou a 0 salta para check_vertical_pixels
         ADD R2, 1                       ; se não, passa para a próxima linha
         JMP next_horizontal_pixels      ; repete o ciclo
 
 check_vertical_pixels:
-    MOV R9, [R4]                        ; guarda em R9 a altura do objeto
+    MOV R9, [R4]                        ; guarda em R9 a largura do objeto
     next_vertical_pixels:
         CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
         CMP R3, R10                     ; verifica se o pixel é azul
         JZ over_limit                   ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
         CALL identify_action            ; se não, chama a função que atribui os códigos de tipo de ação consoante a cor dos pixels que o pacman quer ocupar (descobre se vai colidir com um doce ou um fantasma)
-        SUB R2, R6
+        SUB R2, R6                      ; subtrai à coluna a largura do objeto - 1
         CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
         CMP R3, R10                     ; verifica se o pixel é azul
         JZ over_limit                   ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
         CALL identify_action            ; se não, chama a função que atribui os códigos de tipo de ação consoante a cor dos pixels que o pacman quer ocupar (descobre se vai colidir com um doce ou um fantasma)
-        ADD R2, R6                      ;
-        SUB R9, 1                       ;
+        ADD R2, R6                      ; recupera o valor de R6 antigo 
+        SUB R9, 1                       ; decrementa o contador da largura
         JZ not_over_limit               ; se já chegou a 0 salta para not_over_limit
         ADD R1, 1                       ; se não, passa para a próxima coluna
         JMP next_vertical_pixels        ; repete o ciclo
 
 over_limit:
     MOV R0, 0                           ; como o objeto está a tentar mover-se para cima de um limite guardamos 0 em R0 para indicar que o movimento é proíbido
-    JMP exit_choose_object_action        ; salta para o fim da rotina
+    JMP exit_choose_object_action       ; salta para o fim da rotina
 
 not_over_limit:
-    CMP R0, 1
-    JGT exit_choose_object_action
+    CMP R0, 1                           ; compara o código com 1
+    JGT exit_choose_object_action       ; se o código for maior que 1 salta para o fim da rotina
     MOV R0, 1                           ; guarda em R0 o valor 1 (código que indica que o pacman se pode movimentar e não vai collidir com nada)
-    JMP exit_choose_object_action        ; salta para o fim da rotina
+    JMP exit_choose_object_action       ; salta para o fim da rotina
 
 exit_choose_object_action:
     POP R10                             ; recupera os valores anteriores dos registos modificados
@@ -868,19 +849,6 @@ exit_choose_object_action:
     POP R2
     POP R1
     RET
-
-; *****************************************************************************************************************************
-; GET_COLOR_PIXEL - Vê a cor do pixel na linha e coluna indicadas.
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;
-; Retorna:      R3 - cor do pixel (em formato ARGB de 16 bits)
-; *****************************************************************************************************************************
-get_color_pixel:
-    MOV [DEF_LINE], R1          ; seleciona a linha
-    MOV [DEF_COLUMN], R2        ; seleciona a coluna
-    MOV R3, [GET_COLOR]         ; identifica a cor do pixel na linha e coluna já selecionadas
-    RET 
 
 ; *****************************************************************************************************************************
 ; IDENTIFY_ACTION - Identifica a ação a ação do pacman.
@@ -945,7 +913,7 @@ caught_candy:
     JMP exit_identify_action        ; salta para o fim da rotina
 
 exit_identify_action:
-    POP R6                      ; recupera os valores anteriores dos registos modificados
+    POP R6                          ; recupera os valores anteriores dos registos modificados
     POP R5
     POP R4
     POP R3
@@ -954,103 +922,7 @@ exit_identify_action:
     RET
 
 ; *****************************************************************************************************************************
-; MOVE_OBJECT - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;               R3 - tabela que define o objeto
-;               R4 - tabela que define a animação do objeto
-;               R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
-;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
-;
-; Retorna:      R1 - novo valor da linha, após o movimento
-;               R2 - novo valor da coluna, após o movimento
-; *****************************************************************************************************************************
-move_object:
-    PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
-    PUSH R6
-    PUSH R9
-
-    CALL choose_object_action   ; chama a função que verifica que tipo de movimento o objeto está a tentar ultrapassar algum limite com este movimento
-    CMP R0, FALSE               ; compara o retorno da função (R0) com o valor para FALSE
-    JZ end_movement             ; se a função retornar false, saltamos para end_movement pois o movimento é proíbido
-    CALL delete_object          ; se não, apaga o objeto
-    ADD R1, R7                  ; obtém nova linha
-    ADD R2, R8                  ; obtém nova coluna
-    CALL draw_object            ; desenha versão animada do objeto
-    CALL delay                  ; chama uma função para atrasar/abrandar o movimento
-    CALL delete_object          ; apaga a versão animada do objeto
-    MOV R4, R3                  ; guarda em R4 a tabela de define o objeto (versão não animada)
-    CALL draw_object            ; desenha versão final do objeto
-    CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
-
-end_movement:
-    POP R9                      ; recupera os valores anteriores dos registos modificados
-    POP R6
-    POP R0
-    RET
-
-; *****************************************************************************************************************************
-; MOVE_PACMAN - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;               R3 - tabela que define o pacman
-;               R4 - tabela que define a animação do pacman
-;               R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
-;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
-;
-; Retorna:      R1 - novo valor da linha, após o movimento
-;               R2 - novo valor da coluna, após o movimento
-; *****************************************************************************************************************************
-move_pacman:
-    PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
-    PUSH R6
-    PUSH R9
-    PUSH R10
-
-    CALL choose_object_action   ; chama a função que verifica se o pacman está a tentar ultrapassar algum limite com este movimento
-    CMP R0, 0                   ; compara o retorno da função (R0) com o valor 0
-    JZ end_pacman_movement      ; se a função retornar 0 então saltamos para end_movement pois o movimento é proíbido
-    CMP R0, 3
-    JLT check_pacman_candy
-    CALL explosion
-    JMP end_pacman_movement
-
-check_pacman_candy:
-    CMP R0, 2
-    JNZ new_position_pacman
-    MOV R0, EAT_CANDY
-    MOV [PLAY_MEDIA], R0
-    CALL delete_candy
-    MOV R10, [REMAINING_CANDIES]
-    SUB R10, 1
-    CMP R10, 0
-    JNZ skip_victory
-    CALL victory
-    skip_victory:
-        MOV [REMAINING_CANDIES], R10
-        JMP new_position_pacman
-
-new_position_pacman:
-    CALL delete_object          ; se não, apaga o pacman
-    ADD R1, R7                  ; obtém nova linha
-    ADD R2, R8                  ; obtém nova coluna
-    CALL draw_object            ; desenha versão animada do pacman
-    CALL delay                  ; chama uma função para atrasar/abrandar o movimento
-    CALL delete_object          ; apaga a versão animada do pacman
-    MOV R4, R3                  ; move o valor de R3 para R4 para ser usado como argumento na função seguinte
-    CALL draw_object            ; desenha versão final do pacman
-    CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
-
-
-end_pacman_movement:
-    POP R10
-    POP R9                      ; recupera os valores anteriores dos registos modificados
-    POP R6
-    POP R0
-    RET
-
-; *****************************************************************************************************************************
-; DELETE_CANDY - Verifica qual o candy que o pacman apanhou e apaga-o
+; DELETE_CANDY - Verifica qual o candy que o pacman apanhou e apaga-o.
 ; Argumentos:    R1 - linha
 ;                R2 - coluna
 ;                R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
@@ -1058,57 +930,59 @@ end_pacman_movement:
 ; 
 ; *****************************************************************************************************************************
 delete_candy:
-    PUSH R0
+    PUSH R0                             ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R1
     PUSH R2
     PUSH R3
     PUSH R4
     PUSH R5
     PUSH R6
-    MOV R5, 10H
-    MOV R6, 20H
+
+    MOV R5, MIDDLE_LIN                  ; guarda em R5 o número da linha que representa o meio do ecrã
+    MOV R6, MIDDLE_COL                  ; guarda em R6 o número da coluna que representa o meio do ecrã
     MOV R0, DEF_CANDY_POSITIONS         ; guarda em R0 o endereço da tabela que contêm as posições (linha, coluna) dos 4 rebuçados
     MOV R4, DEF_CANDY                   ; guarda em R4 a tabela que define cada rebuçado
     ADD R1, R7                          ; obtém a nova linha onde pacman encontrou o rebuçado
     ADD R2, R8                          ; obtém a nova coluna onde pacman encontrou o rebuçado
-    CMP R2, R6 
-    JLT left_candies
-    JGT right_candies
+    CMP R2, R6                          ; compara a coluna onde o pacman encontrou o rebuçado com a coluna do meio do ecrã
+    JLT left_candies                    ; se a coluna do rebuçado for maior então é um dos rebuçados da esquerda
+    JGT right_candies                   ; se a coluna do rebuçado for menor então é um dos rebuçados da direita
 
     left_candies:
-        CMP R1, R5 
-        JLT left_up_candy
-        JGT left_down_candy
+        CMP R1, R5                      ; compara a linha onde o pacman encontrou o rebuçado com a linha do meio do ecrã
+        JLT left_up_candy               ; se for menor sabemos que é o rebuçado no canto superior esquerdo
+        JGT left_down_candy             ; se for maior sabemos que é o rebuçado no canto inferior esquerdo
 
     right_candies:
-        CMP R1, R5 
-        JLT right_up_candy
-        JGT right_down_candy
+        CMP R1, R5                      ; compara a linha onde o pacman encontrou o rebuçado com a linha do meio do ecrã
+        JLT right_up_candy              ; se for menor sabemos que é o rebuçado no canto superior direito
+        JGT right_down_candy            ; se for maior sabemos que é o rebuçado no canto inferior direito
 
     left_up_candy:
-        MOV R1, [R0] 
-        MOV R2, [R0+2]
-        JMP exit_delete_candy
+        MOV R1, [R0]                    ; linha do rebuçado
+        MOV R2, [R0+2]                  ; coluna do rebuçado
+        JMP exit_delete_candy           ; salta para o fim da rotina
 
     right_up_candy:
-        MOV R1, [R0+4] 
-        MOV R2, [R0+6]
-        JMP exit_delete_candy
+        MOV R1, [R0+4]                  ; linha do rebuçado
+        MOV R2, [R0+6]                  ; coluna do rebuçado
+        JMP exit_delete_candy           ; salta para o fim da rotina
 
     left_down_candy:
-        MOV R1, [R0+8] 
-        MOV R2, [R0+10]
-        JMP exit_delete_candy
+        MOV R1, [R0+8]                  ; linha do rebuçado
+        MOV R2, [R0+10]                 ; coluna do rebuçado
+        JMP exit_delete_candy           ; salta para o fim da rotina
 
     right_down_candy:
-        MOV R1, [R0+12] 
-        MOV R2, [R0+14]
-        JMP exit_delete_candy
+        MOV R1, [R0+12]                 ; linha do rebuçado
+        MOV R2, [R0+14]                 ; coluna do rebuçado
+        JMP exit_delete_candy           ; salta para o fim da rotina
 
     exit_delete_candy:
-        CALL delete_object
-        POP R6
-        POP R5 
+        CALL delete_object              ; apaga o rebuçado identificado
+
+        POP R6                          ; recupera os valores anteriores dos registos modificados
+        POP R5
         POP R4
         POP R3
         POP R2 
@@ -1124,13 +998,15 @@ delete_candy:
 ;
 ; *****************************************************************************************************************************
 explosion:
-    PUSH R4
-    CALL delete_object
-    MOV R4, DEF_EXPLOSION
-    CALL draw_object
-    MOV R4, TRUE
-    MOV [EXPLOSION_EVENT], R4
-    POP R4
+    PUSH R4                     ; guarda o valor anterior do registo que será alterado nesta função
+    
+    CALL delete_object          ; apaga o pacman
+    MOV R4, DEF_EXPLOSION       ; guarda a tabela que define a explosão em R4
+    CALL draw_object            ; desenha a explosão
+    MOV R4, TRUE                ; guarda o valor de TRUE em R4
+    MOV [EXPLOSION_EVENT], R4   ; guarda na RAM em no endereço EXPLOSION_EVENT o valor TRUE (indicando assim que a explosão já occureu)
+    
+    POP R4                      ; recupera o valor anterior do registo modificado
     RET
 
 ; *****************************************************************************************************************************
@@ -1285,20 +1161,20 @@ move:
     no_sound:
         MOV R1, [PAC_LIN]           ; guarda em R1 a linha atual do pacman
         MOV R2, [PAC_COL]           ; guarda em R2 a coluna atual do pacman
-        MOV R5, 64
-        CMP R2, R5                      ; verifica se a pacman ultrapassou o ecrã no lado direito
-        JZ tunnel_right                 ; se sim, coloca o pacman no lado esquerdo
-        MOV R5, -5
-        CMP R2, R5                      ; verifica se o pacman ultrapassou o ecrã no lado esquerdo
-        JZ tunnel_left                  ; se sim, coloca o pacman no lado direito
+        MOV R5, NUM_COL             ; guarda em R4 o número de colunas no ecrã
+        CMP R2, R5                  ; verifica se a pacman ultrapassou o ecrã no lado direito
+        JZ tunnel_right             ; se sim, coloca o pacman no lado esquerdo
+        MOV R5, -5                  ;
+        CMP R2, R5                  ; verifica se o pacman ultrapassou o ecrã no lado esquerdo
+        JZ tunnel_left              ; se sim, coloca o pacman no lado direito
         JMP end_tunnel
 
         tunnel_right: 
-            MOV R2, -4                  ; coloca o pacman na esquerda
-            JMP end_tunnel              
+            MOV R2, -4              ; coloca o pacman na esquerda
+            JMP end_tunnel          ; salta para o fim do túnel    
         
         tunnel_left:
-            MOV R2, 63                  ; coloca o pacman na direita
+            MOV R2, 63              ; coloca o pacman na direita
 
         end_tunnel:
         MOV R4, DEF_PACMAN          ; move para R4 a tabela que define o pacman de boca fechada
@@ -1322,7 +1198,7 @@ end_move:
 ;
 ; *****************************************************************************************************************************
 game_state_key:
-    PUSH R1
+    PUSH R1                                 ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R2
 
     CMP R0, R11                             ; verifica se a tecla premida e a tecla premida anteriormente são iguais
@@ -1378,24 +1254,26 @@ game_state_key:
         CALL end_game                       ; chama a função para terminar o jogo
 
     exit_state_key:
-        POP R2
+        POP R2                              ; recupera os valores anteriores dos registos modificados
         POP R1
         RET
 
 ; *****************************************************************************************************************************
-; PAUSE_GAME - Pauses the game.
+; PAUSE_GAME - Pausa o jogo.
 ; Atualiza o estado do jogo para PAUSED e seleciona um cenário frontal diferente para indicar visualmente que o jogo está em
 ; pausa. Para além disso pausa todos os sons.
 ; *****************************************************************************************************************************
 pause_game:
-    PUSH R1
+    PUSH R1                                 ; guarda o valore anterior do registo que é alterado nesta função
+
     DI                                      ; desativa interrupções
     MOV [PAUSE_ALL_SOUND], R1               ; pausa a reprodução de todos os sons (o valor de R1 é irrelevante)          
     MOV R1, PAUSED_IMG                      ; guarda em R1 o nº da imagem de pausa
     MOV [SELECT_FRONT_IMG], R1              ; seleciona a imagem de pausa como o cenário frontal
     MOV R1, PAUSED                          ; guarda em R1 o valor do estado de jogo PAUSED
     MOV [GAME_STATE], R1                    ; atualiza o estado de jogo atual para PAUSED
-    POP R1
+    
+    POP R1                                  ; recupera o valor anterior do registo modificado
     RET
 
 ; *****************************************************************************************************************************
@@ -1404,7 +1282,8 @@ pause_game:
 ; pausa. Para além disso resume a reprodução da música de fundo PACMAN THEME.
 ; *****************************************************************************************************************************
 resume_game:
-    PUSH R1
+    PUSH R1                                ; guarda o valore anterior do registo que é alterado nesta função
+
     EI                                     ; reativa interrupções
     MOV R1, PACMAN_THEME                   ; guarda em R1 o nº do som PACMAN THEME
     MOV [RESUME_SOUND], R1                 ; resume a reprodução do som PACMAN THEME
@@ -1412,7 +1291,8 @@ resume_game:
     MOV [DELETE_FRONT_IMG], R1             ; apaga a imagem de pausa como cenário frontal
     MOV R1, PLAYING                        ; guarda em R1 o valor do estado de jogo PLAYING
     MOV [GAME_STATE], R1                   ; atualiza o estado de jogo atual para PLAYING
-    POP R1
+    
+    POP R1                                 ; recupera o valor anterior do registo modificado
     RET
 
 ; *****************************************************************************************************************************
@@ -1421,7 +1301,8 @@ resume_game:
 ; de GAME OVER. Para de aceitar interrupções
 ; *****************************************************************************************************************************
 end_game:
-    PUSH R1
+    PUSH R1                                ; guarda o valore anterior do registo que é alterado nesta função
+
     DI                                     ; desativa interrupções
     DI0                                    ; desativa a interrupção a 0
     DI1                                    ; desativa a interrupção a 1
@@ -1436,7 +1317,8 @@ end_game:
     MOV [SELECT_FRONT_IMG], R1             ; seleciona GAME_OVER_IMG como o cenário frontal
     MOV R1, GAME_OVER                      ; guarda em R1 o valor do estado GAME_OVER
     MOV [GAME_STATE], R1                   ; atualiza o estado atual do jogo para GAME_OVER
-    POP R1
+
+    POP R1                                 ; recupera o valor anterior do registo modificado
     RET
 
 ; *****************************************************************************************************************************
@@ -1444,7 +1326,8 @@ end_game:
 ; ATUALIZA o estado de jogo para WON e mostra o ecrã de vitória.
 ; *****************************************************************************************************************************
 victory:
-    PUSH R1
+    PUSH R1                                ; guarda o valore anterior do registo que é alterado nesta função
+
     DI                                     ; desativa interrupções
     DI0                                    ; desativa a interrupção a 0
     DI1                                    ; desativa a interrupção a 1
@@ -1457,11 +1340,13 @@ victory:
     MOV [DELETE_SCREEN], R1                ; apaga todos os pixels do ecrã (o valor de R1 é irrelevante)
     MOV R1, WON                            ; guarda em R1 o valor do estado WON
     MOV [GAME_STATE], R1                   ; atualiza o estado atual do jogo para WON
-    POP R1
+
+    POP R1                                 ; recupera o valor anterior do registo modificado
     RET
 
 ; *****************************************************************************************************************************
 ; DELAY - Introduz um delay
+;
 ; *****************************************************************************************************************************
 delay:
     PUSH R0                     ; guarda o valor de R0
@@ -1478,10 +1363,12 @@ delay_loop:
 ;			  Usada para sinalizar que os fantasmas devem ser movidos.
 ; *****************************************************************************************************************************
 int_rot_0:
-    PUSH R1
-    MOV R1, 1
+    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+    
+    MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_0], R1             ; sinaliza que a interrupção ocorreu
-    POP R1
+    
+    POP R1                      ; recupera o valor anterior do registo modificado
     RFE                         ; Return From Exception
 
 ; *****************************************************************************************************************************
@@ -1489,10 +1376,12 @@ int_rot_0:
 ;			  Usada sinalizar que o contador tem de atualizado.
 ; *****************************************************************************************************************************
 int_rot_1:
-    PUSH R1
-    MOV R1, 1
+    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+
+    MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_1], R1             ; sinaliza que a interrupção ocorreu
-    POP R1
+
+    POP R1                      ; recupera o valor anterior do registo modificado
     RFE                         ; Return From Exception
 
 ; *****************************************************************************************************************************
@@ -1500,29 +1389,118 @@ int_rot_1:
 ;             Usada sinalizar contar o tempo que a explosão fica vísivel.
 ; *****************************************************************************************************************************
 int_rot_2:
-    PUSH R1
-    MOV R1, 1
+    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+
+    MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_2], R1             ; sinaliza que a interrupção ocorreu
-    POP R1
+    
+    POP R1                      ; recupera o valor anterior do registo modificado
     RFE                         ; Return From Exception
 
 ; *****************************************************************************************************************************
 ; INT_ROT_3 - Rotina de atendimento da interrupção 3
-
+;
 ; *****************************************************************************************************************************
 int_rot_3:
-    PUSH R1
-    MOV R1, 1
+    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+
+    MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_3], R1             ; sinaliza que a interrupção ocorreu
-    POP R1
+    
+    POP R1                      ; recupera o valor anterior do registo modificado
     RFE                         ; Return From Exception
+
+;*****************************************************************************************************************************
+; PSEUDO_RANDOM - Gera um número pseudo-aleatório entre 0 e 15.
+; Retorna: R6 - o número pseudo-aleatório
+;               
+; *****************************************************************************************************************************
+pseudo_random:
+    PUSH R1                     ; guarda o valor anterior do registo que é alterado nesta função
+
+	MOV  R1, KEY_COL            ; periférico PIN
+    MOVB R6, [R1]               ; lê o periférico
+    SHR R6, 4                   ; faz shift dos bits no ar para as casas de menor peso
+    
+    POP R1                      ; recupera o valor anterior do registo modificado
+    RET
+
+; *****************************************************************************************************************************
+; SPAWN_GHOSTS - Desenha os fantasmas consoante o número máximo de fantasmas permitidos
+;
+; *****************************************************************************************************************************
+spawn_ghosts:
+    PUSH R1                                 ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+
+    MOV R3, [NUM_GHOSTS]                    ; guarda o numero de fantasmas em jogo
+    MOV R5, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
+    CMP R3, R5                              ; verifica se já estamos no número máximo
+    JZ spawn_ghosts_end                     ; se sim, salta para o fim da rotina
+    MOV R8, 0                               ; vamos começar por ver o fantasma 0
+    for_max_ghosts:
+        CMP R5, 0                           ; verifica se já vimos todos os ghosts
+        JZ spawn_ghosts_end                 ; se já, saltamos para o fim da rotina
+        check_aliveness:
+            MOV R9, R8                      ; cria uma cópia de R8 que será editada
+            MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts
+            SHL R9, 1                       ; multiplica o valor de R9 por dois (2 porque WORD)
+            ADD R9, R1                      ; endereço do valor indentificador da "aliveness" do fantasma em questão
+            MOV R7, [R9]                    ; R7 guarda o valor indicador de se o fantasma está vivo
+            CMP R7, 1                       ; verifica se o fantasma está vivo
+            JZ next_ghost                   ; se estiver, vamos ver o próximo ghost
+            CALL pseudo_random              ; se não, chamamos a função para gerar um número aleatório entre 0 e 15 guardado em R0
+            CMP R6, 7                       ; verifica se o número aleatório é 3
+            JNZ next_ghost                  ; se não, vamos para o próximo fantasma
+            MOV R7, R8                      ; cria uma cópia de R8 que será alterada
+            MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar 
+            MUL R7, R4                      ; se for 3, obtemos a posição relativa ao topo da tabela GHOST_POS da linha do fantasma em causa
+            MOV R4, GHOST_POS               ; endereço da tabela ghost_pos
+            ADD R7, R4                      ; endereço da linha do fantasma em causa 
+            MOV R1, [R7]                    ; linha do fantasma em causa
+            ADD R7, 2                       ; endereço da coluna
+            MOV R2, [R7]                    ; coluna do fantasma em causa
+            ADD R7, 2                       ; endereço da tabela que define o fantasma em causa
+            MOV R4, [R7]                    ; guarda tabela que define o fantasma em causa em R4
+            CALL draw_object                ; função que desenha um objeto neste caso o fantasma
+            MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts 
+            MOV R9, R8                      ; cópia de R8
+            SHL R9, 1                       ; multiplica o valor de 98 por dois (2 porque WORD)
+            ADD R9, R1                      ; endereço do valor indentificador da "aliveness" do fantasma em questão
+            MOV R2, 1                       ; guarda em R2 o valor 1 que o fantasma estar vivo
+            MOV [R9], R2                    ; atualizamos o estado do ghost para alive
+            INC R3                          ; incrementa o número de alive ghosts
+        next_ghost:
+            INC R8                          ; próximo fantasma
+            DEC R5                          ; decrementa o valor de R3 para avançar o for loop
+            JMP for_max_ghosts              ; salta para o inicio do "for" loop
+    
+spawn_ghosts_end:
+    MOV [NUM_GHOSTS], R3                    ; guarda na memória o novo número de alive ghosts
+    POP R9                                  ; recupera os valores anteriores dos registos modificados
+    POP R8
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
 
 ; *****************************************************************************************************************************
 ; GHOST_CYCLE - Escolhe que fantasmas se vão movimentar após uma interrupção e chama a função para os mexer. Vão evoluir de
 ;               3.2 em 3.2 segundos.
 ; *****************************************************************************************************************************
 ghost_cycle:
-    PUSH R0
+    PUSH R0                                 ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R1
     PUSH R2
     PUSH R3
@@ -1534,17 +1512,18 @@ ghost_cycle:
     PUSH R9
     PUSH R10
     PUSH R11
-    MOV R0, [int_0]             ; guarda em R0 o valor que indica a occurência da interrupção 0
-    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção ocorreu
-    JNZ exit_ghost_cycle        ; se não tiver occurido salta para o fim da rotina
-    MOV R0, [COUNT_INT_0]       ; guarda em R0 o número de vezes de lidámos com o interrupção 0 nesta função
-    INC R0                      ; incrementa R0
-    MOV R2, 8                   ; guarda em R2 o valor 8 (cada 8 vezes queremos mexer o fantasma)
-    MOD R0, R2                  ; guarda em R0 o resto da divisão inteira por 10
-    MOV [COUNT_INT_0], R0       ; atualiza na memoria o valor de R0
-    JNZ exit_ghost_cycle        ; se o resto da divisão não for 0 salta para o fim da rotina
-    MOV R3, MAX_GHOSTS          ; guarda o numero máximo de fantasmas
-    MOV R0, 0                   ; vamos começar pelo fantasma 0
+
+    MOV R0, [int_0]                         ; guarda em R0 o valor que indica a occurência da interrupção 0
+    CMP R0, TRUE                            ; se o valor for igual a TRUE (1), então a interrupção ocorreu
+    JNZ exit_ghost_cycle                    ; se não tiver occurido salta para o fim da rotina
+    MOV R0, [COUNT_INT_0]                   ; guarda em R0 o número de vezes de lidámos com o interrupção 0 nesta função
+    INC R0                                  ; incrementa R0
+    MOV R2, 8                               ; guarda em R2 o valor 8 (cada 8 vezes queremos mexer o fantasma)
+    MOD R0, R2                              ; guarda em R0 o resto da divisão inteira por 10
+    MOV [COUNT_INT_0], R0                   ; atualiza na memoria o valor de R0
+    JNZ exit_ghost_cycle                    ; se o resto da divisão não for 0 salta para o fim da rotina
+    MOV R3, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
+    MOV R0, 0                               ; vamos começar pelo fantasma 0
     for_max_ghosts2:
         CMP R3, 0                           ; verifica se já vimos todos os ghosts
         JZ exit_ghost_cycle                 ; se já, saltamos para o fim da rotina
@@ -1570,7 +1549,7 @@ ghost_cycle:
             MOV R4, [R7]                    ; guarda o endereço da tabela que define o fantasma em R4
             CALL animate_ghost              ; chama a função que anima o fantasma
             MOV [R10], R1                   ; atualiza a memória com a nova linha atual do fantasma (pós movimento)
-            MOV [R11], R2                    ; atualiza a memória com a nova coluna atual do fantasma (pós movimento)
+            MOV [R11], R2                   ; atualiza a memória com a nova coluna atual do fantasma (pós movimento)
             INC R3                          ; incrementa o número de alive ghosts
         next_ghost2:
             INC R0                          ; próximo fantasma
@@ -1578,9 +1557,9 @@ ghost_cycle:
             JMP for_max_ghosts2             ; salta para o inicio do "for" loop
     
     exit_ghost_cycle:
-        MOV R0, FALSE           ; guarda em R0 o valor FALSE (0)
-        MOV [int_0], R0         ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
-        POP R11
+        MOV R0, FALSE                       ; guarda em R0 o valor FALSE (0)
+        MOV [int_0], R0                     ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
+        POP R11                             ; recupera os valores anteriores dos registos modificados
         POP R10
         POP R9
         POP R8
@@ -1603,17 +1582,19 @@ ghost_cycle:
 ;
 ; *****************************************************************************************************************************
 animate_ghost:
-    PUSH R3
+    PUSH R3                         ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R5
     PUSH R6
     PUSH R7
     PUSH R8
+
     MOV R5, [PAC_LIN]               ; linha do pacman
     MOV R6, [PAC_COL]               ; coluna do pacman
     CALL choose_ghost_direction     ; chama a função que escolhe em que direção o fantasma se mexe para se aproximar do pacman
     MOV R3, R4                      ; cópia de R4 para argumento na função move_object
     CALL move_object		        ; chama a função que move o fantasma
-    POP R8
+    
+    POP R8                          ; recupera os valores anteriores dos registos modificados
     POP R7
     POP R6
     POP R5
@@ -1632,102 +1613,159 @@ animate_ghost:
 ;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
 ; *****************************************************************************************************************************
 choose_ghost_direction:
-    CMP R5, R1
-    JLT up
-    JGT down
-    MOV R7, 0
-    JMP check_horizontal
+    CMP R5, R1                      ; compara a coluna onde se encotra o pacman com a coluna do fantasma
+    JLT up                          ; se a coluna do pacman for menor salta para up pois o fantasma tem que subir
+    JGT down                        ; se a coluna do pacman for maior salta para down pois o fantasma tem que descer
+    MOV R7, 0                       ; se não for nenhum dos dois é porque se encontram na mesma coluna, nesse caso o fantasma não precisa de se mexer verticalmente
+    JMP check_horizontal            ; salta para check_horizontal
         
     up:
-    MOV R7, -1
-    JMP check_horizontal
+    MOV R7, -1                      ; guarda em R7 o valor -1 (indica para cima)
+    JMP check_horizontal            ; salta para check_horizontal
     
     down:
-    MOV R7, 1
-    JMP check_horizontal
+    MOV R7, 1                       ; guarda em R7 o valor 1 (indica para baixo)
 
     check_horizontal:
-        CMP R6, R2
-        JLT left
-        JGT right
-        MOV R8, 0
-        JMP leave_ghost_direction
+        CMP R6, R2                  ; compara a linha onde se encotra o pacman com a linha do fantasma
+        JLT left                    ; se a linha do pacman for menor salta para left pois o fantasma tem que ir para a esquerda
+        JGT right                   ; se a linha do pacman for maior salta para right pois o fantasma tem que ir para a direita
+        MOV R8, 0                   ; se não for nenhum dos dois é por se encontram na mesma linha, nesse caso o fantasma não precisa de se mexer horizontalmente
+        JMP leave_ghost_direction   ; salta para o fim da rotina
 
         left:
-        MOV R8, -1
-        JMP leave_ghost_direction
+        MOV R8, -1                  ; guarda em R8 o valor -1 (indica para a esquerda)
+        JMP leave_ghost_direction   ; salta para o fim da rotina
 
         right:
-        MOV R8, 1
-        JMP leave_ghost_direction
+        MOV R8, 1                   ; guarda em R8 o valor 1 (indica para a direita)
 
     leave_ghost_direction:
         RET
 
+; *****************************************************************************************************************************
+; MOVE_PACMAN - Incrementa ou decrementa o contador com base na tecla pressionada e atualiza o display
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R3 - tabela que define o pacman
+;               R4 - tabela que define a animação do pacman
+;               R7 - sentido do movimento do objeto na vertical (valor a somar à linha em cada movimento: +1 para baixo, -1 para cima)
+;               R8 - sentido do movimento do objeto na horizontal (valor a somar à coluna em cada movimento: +1 para a direita, -1 para a esquerda)
+;
+; Retorna:      R1 - novo valor da linha, após o movimento
+;               R2 - novo valor da coluna, após o movimento
+; *****************************************************************************************************************************
+move_pacman:
+    PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
+    PUSH R6
+    PUSH R9
+    PUSH R10
+
+    CALL choose_object_action   ; chama a função que verifica se o pacman está a tentar ultrapassar algum limite com este movimento
+    CMP R0, 0                   ; compara o retorno da função (R0) com o valor 0
+    JZ end_pacman_movement      ; se a função retornar 0 então saltamos para end_movement pois o movimento é proíbido
+    CMP R0, 3
+    JLT check_pacman_candy
+    CALL explosion
+    JMP end_pacman_movement
+
+check_pacman_candy:
+    CMP R0, 2
+    JNZ new_position_pacman
+    MOV R0, EAT_CANDY
+    MOV [PLAY_MEDIA], R0
+    CALL delete_candy
+    MOV R10, [REMAINING_CANDIES]
+    SUB R10, 1
+    CMP R10, 0
+    JNZ skip_victory
+    CALL victory
+    skip_victory:
+        MOV [REMAINING_CANDIES], R10
+        JMP new_position_pacman
+
+new_position_pacman:
+    CALL delete_object          ; se não, apaga o pacman
+    ADD R1, R7                  ; obtém nova linha
+    ADD R2, R8                  ; obtém nova coluna
+    CALL draw_object            ; desenha versão animada do pacman
+    CALL delay                  ; chama uma função para atrasar/abrandar o movimento
+    CALL delete_object          ; apaga a versão animada do pacman
+    MOV R4, R3                  ; move o valor de R3 para R4 para ser usado como argumento na função seguinte
+    CALL draw_object            ; desenha versão final do pacman
+    CALL delay                  ; chama uma função para atrasar/abrandar o movimento 
+
+
+end_pacman_movement:
+    POP R10
+    POP R9                      ; recupera os valores anteriores dos registos modificados
+    POP R6
+    POP R0
+    RET
 
 ; *****************************************************************************************************************************
 ; SCORE_CYCLE - Incrementa o contador dos pontos cada 5 interrupções 1 para contar em segundos (200ms *  5 = 1 segundo).
 ; 
 ; *****************************************************************************************************************************
 score_cycle:
-    PUSH R0
+    PUSH R0                         ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R1
     PUSH R2
     PUSH R3
     PUSH R4
     
-    MOV R0, [int_1]             ; guarda em R0 o valor que indica a occurência da interrupção 1
-    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção ocorreu
-    JNZ exit_score_cycle        ; se não tiver occurido salta para o fim da rotina
-    MOV R0, [COUNT_INT_1]       ; guarda em R0 o número de vezes de lidámos com o interrupção 1 nesta função
-    INC R0                      ; incrementa R0
-    MOV R2, 5                   ; guarda em R2 o valor 5 (cada 5 vezes queremos incrementar o contador)
-    MOD R0, R2                  ; guarda em R0 o resto da divisão inteira por 5
-    MOV [COUNT_INT_1], R0       ; atualiza na memoria o valor de R0
-    JNZ exit_score_cycle        ; se o resto da divisão não for 0 salta para o fim da rotina
-    MOV R0, SCORE               ; obtém o endereço da pontuação atual
-    MOV R1, [R0]                ; obtém o valor da pontuação atual
-    MOV R2, UPPER_LIMIT         ; obtém o valor do limite superior
-    CMP R1, R2                  ; determina se o valor atual é o limite superior
-    JZ time_exceeded            ; se for, salta para time_exceeded para terminar o jogo
-    ADD R1, 1                   ; caso contrário, incrementa a pontuação por 1
-    MOV R3, MASK_LSD            ; copia a máscara das unidades para R3
-    MOV R4, R1                  ; copia valor da pontuação para R4
-    AND R4, R3                  ; máscara para obter o digito menos significativo de R4
-    MOV R2, 0AH                 ; copia para R2 o valor hexadecimal A 
-    CMP R4, R2                  ; verifica se o digito menos significativo é 10 (hex 'A')
-    JZ skip_hex                 ; se sim salta para jump_hex que irá saltar à frente os valores A-F
-    MOV [DISPLAYS], R1          ; se não, atualiza o display
-    MOV [R0], R1                ; guarda o novo valor na memória
-    JMP exit_score_cycle        ; salta para o fim da rotina
+    MOV R0, [int_1]                 ; guarda em R0 o valor que indica a occurência da interrupção 1
+    CMP R0, TRUE                    ; se o valor for igual a TRUE (1), então a interrupção ocorreu
+    JNZ exit_score_cycle            ; se não tiver occurido salta para o fim da rotina
+    MOV R0, [COUNT_INT_1]           ; guarda em R0 o número de vezes de lidámos com o interrupção 1 nesta função
+    INC R0                          ; incrementa R0
+    MOV R2, 5                       ; guarda em R2 o valor 5 (cada 5 vezes queremos incrementar o contador)
+    MOD R0, R2                      ; guarda em R0 o resto da divisão inteira por 5
+    MOV [COUNT_INT_1], R0           ; atualiza na memoria o valor de R0
+    JNZ exit_score_cycle            ; se o resto da divisão não for 0 salta para o fim da rotina
+    MOV R0, SCORE                   ; obtém o endereço da pontuação atual
+    MOV R1, [R0]                    ; obtém o valor da pontuação atual
+    MOV R2, UPPER_LIMIT             ; obtém o valor do limite superior
+    CMP R1, R2                      ; determina se o valor atual é o limite superior
+    JZ time_exceeded                ; se for, salta para time_exceeded para terminar o jogo
+    ADD R1, 1                       ; caso contrário, incrementa a pontuação por 1
+    MOV R3, MASK_LSD                ; copia a máscara das unidades para R3
+    MOV R4, R1                      ; copia valor da pontuação para R4
+    AND R4, R3                      ; máscara para obter o digito menos significativo de R4
+    MOV R2, 0AH                     ; copia para R2 o valor hexadecimal A 
+    CMP R4, R2                      ; verifica se o digito menos significativo é 10 (hex 'A')
+    JZ skip_hex                     ; se sim salta para jump_hex que irá saltar à frente os valores A-F
+    MOV [DISPLAYS], R1              ; se não, atualiza o display
+    MOV [R0], R1                    ; guarda o novo valor na memória
+    JMP exit_score_cycle            ; salta para o fim da rotina
     
     skip_hex:
-        ADD R1, 6               ; adiciona 6 ao contador para saltar os valores de A - F
-        MOV R3, MASK_TENS       ; copia a máscara das dezenas para R3
-        MOV R4, R1              ; copia o valor do contador para R4
-        AND R4, R3              ; aplica a máscara das dezenas
-        MOV R2, 0A0H            ; copia para R2 o valor hexadecimal 0A0H
-        CMP R4, R2              ; verifica se as dezenas estão a A
-        JZ jump_hundreds        ; se sim salta para jump_hundreds que irá incrementar para 256H que mostra 100 nos displays
-        MOV [DISPLAYS], R1      ; atualiza o display
-        MOV [R0], R1            ; guarda o novo valor na memória
-        JMP exit_score_cycle    ; salta para o fim da rotina
+        ADD R1, INC_TENS            ; adiciona 6 ao contador para saltar os valores de A - F
+        MOV R3, MASK_TENS           ; copia a máscara das dezenas para R3
+        MOV R4, R1                  ; copia o valor do contador para R4
+        AND R4, R3                  ; aplica a máscara das dezenas
+        MOV R2, 0A0H                ; copia para R2 o valor hexadecimal 0A0H
+        CMP R4, R2                  ; verifica se as dezenas estão a A
+        JZ jump_hundreds            ; se sim salta para jump_hundreds que irá incrementar para 256H que mostra 100 nos displays
+        MOV [DISPLAYS], R1          ; atualiza o display
+        MOV [R0], R1                ; guarda o novo valor na memória
+        JMP exit_score_cycle        ; salta para o fim da rotina
 
     jump_hundreds:
-        MOV R3, 96              ; copia 96 para R3
-        ADD R1, R3              ; adiciona o valor de R3(96) a R1
-        MOV [DISPLAYS], R1      ; atualiza o display
-        MOV [R0], R1            ; guarda o novo valor na memória
-        JMP exit_score_cycle    ; salta para o fim da rotina
+        MOV R3, INC_HUNDREDS        ; copia 96 para R3 para saltar para simular as centenas em hexadecinal
+        ADD R1, R3                  ; adiciona o valor de R3(96) a R1
+        MOV [DISPLAYS], R1          ; atualiza o display
+        MOV [R0], R1                ; guarda o novo valor na memória
+        JMP exit_score_cycle        ; salta para o fim da rotina
 
     time_exceeded:
-        CALL end_game                 ; chama a função para terminar o jogo
-        MOV R1, TIME_LIMIT_IMG        ; guarda em R1 o nº do cenário frontal TIME_LIMIT_IMG
-        MOV [SELECT_FRONT_IMG], R1    ; seleciona TIME_LIMIT_IMG como o cenário frontal
+        CALL end_game               ; chama a função para terminar o jogo
+        MOV R1, TIME_LIMIT_IMG      ; guarda em R1 o nº do cenário frontal TIME_LIMIT_IMG
+        MOV [SELECT_FRONT_IMG], R1  ; seleciona TIME_LIMIT_IMG como o cenário frontal
 
     exit_score_cycle:
-        MOV R0, FALSE           ; guarda em R0 o valor FALSE (0)
-        MOV [int_1], R0         ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
+        MOV R0, FALSE               ; guarda em R0 o valor FALSE (0)
+        MOV [int_1], R0             ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
         POP R4
         POP R3
         POP R2
@@ -1735,29 +1773,16 @@ score_cycle:
         POP R0
         RET
 
-
-;*****************************************************************************************************************************
-; PSEUDO_RANDOM - Gera um número pseudo-aleatório entre 0 e 15.
-; Retorna: R6 - o número pseudo-aleatório
-;               
-; *****************************************************************************************************************************
-pseudo_random:
-    PUSH R1
-	MOV  R1, KEY_COL ; periférico PIN
-    MOVB R6, [R1]    ; lê o periférico
-    SHR R6, 4        ; faz shift dos bits no ar para as casas de menor peso
-    POP R1
-    RET
-
 ; *****************************************************************************************************************************
 ; CHECK_EXPLOSION - Verifica se a explosão já ocorreu e apaga-a passado 1.5 segundos.
 ;  
 ; *****************************************************************************************************************************
 check_explosion:
-    PUSH R0
+    PUSH R0                     ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R1
     PUSH R2
     PUSH R4
+
     MOV R0, TRUE                ; guarda o valor de TRUE (1) em R0
     MOV R4, [EXPLOSION_EVENT]   ; guarda em R4 o valor que indica se a explosão já ocorreu
     CMP R4, R0                  ; verifica se a explosão já ocorreu
@@ -1780,7 +1805,7 @@ check_explosion:
     CALL end_game               ; chama a função para terminar o jogo
 
 exit_check_explosion:
-    POP R4
+    POP R4                      ; recupera os valores anteriores dos registos modificados
     POP R2
     POP R1
     POP R0
