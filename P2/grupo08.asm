@@ -689,7 +689,6 @@ exit_draw_limit_box:
 
 ; *****************************************************************************************************************************
 ; DRAW_GHOST_SPAWNS - Desenha os spawns dos fantasmas
-; Argumentos: NUNO INÊS FAZ A FUNCTION DESCRIPTION AQUI COM OS ARGUMENTOS E COMENTA ESTA FUNÇÃO
 ;
 ; *****************************************************************************************************************************
 draw_ghost_spawns:
@@ -697,31 +696,30 @@ draw_ghost_spawns:
     PUSH R3
     PUSH R4
     
-    MOV R4, R2
-    CALL write_pixel
-    ADD R2, 1
-    CALL write_pixel
-    ADD R2, 1
-    CALL write_pixel
-    ADD R1, 1
-    CMP R4, 0
-    JZ left_ghost_spawns
-    SUB R2, 2
-    CALL write_pixel
-    ADD R1, 1
-    JMP jump_left_spawns
+    MOV R4, R2                  ; copia o valor de R2 para R4 para poder ser usada
+    CALL write_pixel            ; chama a função para escrever pixel
+    ADD R2, 1                   ; avança para a próxima coluna
+    CALL write_pixel            ; chama a função para escrever pixel
+    ADD R2, 1                   ; avança para a próxima coluna
+    CALL write_pixel            ; chama a função para escrever pixel
+    ADD R1, 1                   ; avança para a próxima linha
+    JZ left_ghost_spawns        ; se 0 salta para left_ghost_spawns
+    SUB R2, 2                   ; anda duas colunas para trás
+    CALL write_pixel            ; chama a função para escrever pixel
+    ADD R1, 1                   ; avança para a próxima linha
+    JMP jump_left_spawns        ; salta para jump_left_spawns
     
     left_ghost_spawns:
-        CALL write_pixel
-        ADD R1, 1
-        SUB R2, 2
+        CALL write_pixel        ; chama a função para escrever pixel
+        ADD R1, 1               ; avança para a próxima linha
+        SUB R2, 2               ; anda duas colunas para trás
 
     jump_left_spawns:
-        CALL write_pixel       ; chama a função para desenhar o pixel
-        ADD R2, 1              ; avança
-        CALL write_pixel
-        ADD R2, 1
-        CALL write_pixel
+        CALL write_pixel        ; chama a função para desenhar o pixel
+        ADD R2, 1               ; anda uma coluna para trás
+        CALL write_pixel        ; chama a função para desenhar o pixel
+        ADD R2, 1               ; anda outra coluna para trás
+        CALL write_pixel        ; chama a função para desenhar o pixel
         
         POP R4                  ; recupera os valores anteriores dos registos modificados
         POP R3
