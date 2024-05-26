@@ -885,12 +885,12 @@ choose_ghost_action:
     SUB R6, 1                           ; subtrai 1 à largura do objeto
     ADD R1, R7                          ; soma à linha o valor do eventual movimento
     ADD R2, R8                          ; soma à coluna o valor do eventual movimento
-    MOV R0, 1                           ; 
+    MOV R0, 1                           ; guarda o valor 1 em R0
     MOV R10, BLUE                       ; guarda em R10 a cor BLUE (cor dos limites)
     MOV R11, YLW                        ; guarda em R11 a cor YLW  (cor do pacmans)
 
 check_horizontal_ghost:
-    MOV R9, [R4+2]                      ;
+    MOV R9, [R4+2]                      ; guarda a largura do objeto em R9
     next_horizontal_ghost:
         CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
         CMP R3, R10                     ; verifica se o pixel é azul
@@ -906,7 +906,7 @@ check_horizontal_ghost:
         JZ caught_pacman
 
         SUB R1, R5                      ; recupera a linha inicial
-        SUB R9, 1                       ; decrementa R9
+        SUB R9, 1                       ; decrementa por 1 a largura
         JZ check_vertical_ghost         ; se já chegou a 0 salta para check_vertical_pixels
         ADD R2, 1                       ; se não, passa para a próxima linha
         JMP next_horizontal_ghost       ; repete o ciclo
@@ -917,37 +917,37 @@ check_vertical_ghost:
         CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
         CMP R3, R10                     ; verifica se o pixel é azul
         JZ ghost_over_limit             ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
-        CMP R3, R11
-        JZ caught_pacman
+        CMP R3, R11                     ; verifica se o pixel é amarelo
+        JZ caught_pacman                ; se sim, salta para caught_pacman
 
-        SUB R2, R6
+        SUB R2, R6                      ; coluna mais à esquerda do objeto
         CALL get_color_pixel            ; chama a função que identifica a cor do pixel selecionado
         CMP R3, R10                     ; verifica se o pixel é azul
         JZ ghost_over_limit             ; se sim, o objeto está a tentar mover-se para lá de um limite então salta para over_limit
-        CMP R3, R11
-        JZ caught_pacman
+        CMP R3, R11                     ; verifica se o pixel é amarelo
+        JZ caught_pacman                ; se sim, salta para caught_pacman
 
-        ADD R2, R6                      ;
-        SUB R9, 1                       ;
+        ADD R2, R6                      ; coluna mais à direita do objeto
+        SUB R9, 1                       ; decrementa por 1 a altura
         JZ ghost_not_over_limit         ; se já chegou a 0 salta para not_over_limit
         ADD R1, 1                       ; se não, passa para a próxima coluna
         JMP next_vertical_ghost         ; repete o ciclo
 
 caught_pacman:
-    MOV R0, 2
-    JMP exit_choose_ghost_action
+    MOV R0, 2                           ; guarda em R0 o valor 1 (código que indica que o fantasma se encontrou o pacman)
+    JMP exit_choose_ghost_action        ; salta para o fim da rotina
 
 ghost_over_limit:
     MOV R0, 0                           ; como o objeto está a tentar mover-se para cima de um limite guardamos 0 em R0 para indicar que o movimento é proíbido
     JMP exit_choose_ghost_action        ; salta para o fim da rotina
 
 ghost_not_over_limit:
-    MOV R0, 1                           ; guarda em R0 o valor 1 (código que indica que o pacman se pode movimentar e não vai collidir com nada)
+    MOV R0, 1                           ; guarda em R0 o valor 1 (código que indica que o fantasma se pode movimentar e não vai collidir com nada)
     JMP exit_choose_ghost_action        ; salta para o fim da rotina
 
 exit_choose_ghost_action:
-    POP R11
-    POP R10                             ; recupera os valores anteriores dos registos modificados
+    POP R11                             ; recupera os valores anteriores dos registos modificados
+    POP R10                             
     POP R9
     POP R8
     POP R7
@@ -1007,7 +1007,7 @@ caught_candy:
     JMP exit_identify_action        ; salta para o fim da rotina
 
 exit_identify_action:
-    POP R6                      ; recupera os valores anteriores dos registos modificados
+    POP R6                          ; recupera os valores anteriores dos registos modificados
     POP R5
     POP R4
     POP R3
@@ -1766,28 +1766,28 @@ move_pacman:
     CALL choose_object_action   ; chama a função que verifica se o pacman está a tentar ultrapassar algum limite com este movimento
     CMP R0, 0                   ; compara o retorno da função (R0) com o valor 0
     JZ end_pacman_movement      ; se a função retornar 0 então saltamos para end_movement pois o movimento é proíbido
-    CMP R0, 3                   ;
-    JLT check_pacman_candy
-    CALL explosion
-    JMP end_pacman_movement
+    CMP R0, 3                   ; compara o retorno da função (R0) com o valor 3
+    JLT check_pacman_candy      ; se a função retornar 3 então não saltamos e chamamos a função da explosão
+    CALL explosion              ; chama a função da explosão
+    JMP end_pacman_movement     ; salta para o fim da rotina
 
 check_pacman_candy:
-    CMP R0, 2
-    JNZ new_position_pacman
-    MOV R0, EAT_CANDY
-    MOV [PLAY_MEDIA], R0
-    CALL delete_candy
-    MOV R10, [REMAINING_CANDIES]
-    SUB R10, 1
-    CMP R10, 0
-    JNZ skip_victory
-    CALL victory
+    CMP R0, 2                           ; compara o retorno da função (R0) com o valor 2
+    JNZ new_position_pacman             ; se o retorno da função não for 2 salta para o new_position_pacman
+    MOV R0, EAT_CANDY                   ; vai buscar o endereço do som a comer o rebuçado
+    MOV [PLAY_MEDIA], R0                ; dá play do som
+    CALL delete_candy                   ; apaga o rebuçado
+    MOV R10, [REMAINING_CANDIES]        ; guarda no registo R10 quantos rebuçados faltam comer
+    SUB R10, 1                          ; subtrai o rebuçado comido
+    CMP R10, 0                          ; verifica se falta algum rebuçado
+    JNZ skip_victory                    ; se ainda faltar dá skip à victory
+    CALL victory                        ; se não falta, chama a função victory
     skip_victory:
-        MOV [REMAINING_CANDIES], R10
-        JMP end_pacman_movement
+        MOV [REMAINING_CANDIES], R10    ; guarda o número de rebuçados que ainda faltam comer
+        JMP end_pacman_movement         ; salta para o fim da rotina
 
 new_position_pacman:
-    CALL delete_object          ; se não, apaga o pacman
+    CALL delete_object          ; apaga o pacman
     ADD R1, R7                  ; obtém nova linha
     ADD R2, R8                  ; obtém nova coluna
     CALL draw_object            ; desenha versão animada do pacman
