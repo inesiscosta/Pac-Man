@@ -703,6 +703,7 @@ draw_ghost_spawns:
     ADD R2, 1                   ; avança para a próxima coluna
     CALL write_pixel            ; chama a função para escrever pixel
     ADD R1, 1                   ; avança para a próxima linha
+    CMP R4, 0                   ; verifica se o valor de R4 é 0
     JZ left_ghost_spawns        ; se 0 salta para left_ghost_spawns
     SUB R2, 2                   ; anda duas colunas para trás
     CALL write_pixel            ; chama a função para escrever pixel
@@ -905,7 +906,7 @@ check_horizontal_ghost:
         JZ caught_pacman
 
         SUB R1, R5                      ; recupera a linha inicial
-        SUB R9, 1                       ; decrementa ????? (NUNO)
+        SUB R9, 1                       ; decrementa R9
         JZ check_vertical_ghost         ; se já chegou a 0 salta para check_vertical_pixels
         ADD R2, 1                       ; se não, passa para a próxima linha
         JMP next_horizontal_ghost       ; repete o ciclo
@@ -1084,7 +1085,7 @@ delete_candy:
         RET
 
 ; *****************************************************************************************************************************
-; EXPLOSTION - Apaga o pacman, mostra uma explosão e altera EXPLOSION_EVENT para refletir que a explosão já ocorreu.
+; EXPLOSION - Apaga o pacman, mostra uma explosão e altera EXPLOSION_EVENT para refletir que a explosão já ocorreu.
 ; Argumentos: R1 - linha do pacman
 ;             R2 - coluna do pacman
 ;             R4 - tabela que define o pacman
@@ -1626,8 +1627,8 @@ ghost_cycle:
     MOV R3, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
     MOV R0, 0                               ; vamos começar pelo fantasma 0
     check_all_ghosts:
-        CMP R3, 0                           ; verifica se já vimos todos os ghosts
-        JZ exit_ghost_cycle                 ; se já, saltamos para o fim da rotina
+        CMP R3, 0                       ; verifica se já vimos todos os ghosts
+        JZ exit_ghost_cycle             ; se já, saltamos para o fim da rotina
         MOV R9, R0                      ; cria uma cópia de R0 que será editada
         MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts
         SHL R9, 1                       ; multiplica o valor de R9 por dois (2 porque WORD)
@@ -1783,6 +1784,7 @@ check_pacman_candy:
     CALL victory
     skip_victory:
         MOV [REMAINING_CANDIES], R10
+        JMP end_pacman_movement
 
 new_position_pacman:
     CALL delete_object          ; se não, apaga o pacman
