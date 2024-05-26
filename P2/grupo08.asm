@@ -41,11 +41,13 @@ START_MENU_IMG         EQU 0           ; imagem para o ecrã inicial
 GAME_BACKGROUND        EQU 1           ; imagem para o fundo do jogo
 PAUSED_IMG             EQU 2           ; imagem frontal para quando o jogo está em pausa
 GAME_OVER_IMG          EQU 3           ; imagem frontal para quando o jogador perde
+TIME_LIMIT_IMG         EQU 4           ; imagem frontal para quando o jogador perde por tempo
 
 ; Sons / GIFs
 PACMAN_THEME           EQU 0           ; música do jogo
 PACMAN_CHOMP           EQU 1           ; som do pacman a movimentar-se
 GHOSTS_GIF             EQU 2           ; GIF GAME OVER
+GAME_OVER_SOUND        EQU 3           ; som game_over
 
 ; Controlos
 UP_LEFT_KEY            EQU 11H         ; key 0 for moving up and left
@@ -259,6 +261,7 @@ DEF_CANDY_POSITIONS:
 
 NUM_GHOSTS:     WORD 0                  ; guarda o número de fantasmas em jogo
 SCORE:          WORD 0                  ; guarda a pontução do jogo
+COUNT_INT_1:    WORD 0                  ; guarda o número de vezes que lidámos com a count_int_1 (resets a 5)
 
 ; Posições Atuais
 PAC_LIN:        WORD PAC_START_LIN      ; guarda a linha atual do pacman, inicializada a PAC_START_LIN
@@ -1245,6 +1248,8 @@ end_game:
     DI2                                    ; desativa a interrupção a 2
     DI3                                    ; desativa a interrupção a 3
     MOV [DELETE_SCREEN], R1                ; apaga todos os pixels do ecrã (o valor de R1 é irrelevante)
+    MOV R1, GAME_OVER_SOUND                ; guarda em R1 o nº do som GAME_OVER_SOUND
+    MOV [PLAY_MEDIA], R1                   ; toca o som game over
     MOV R1, GHOSTS_GIF                     ; guarda em R1 o nº do video GHOSTS_GIF
     MOV [LOOP_MEDIA], R1                   ; reproduz em loop o video GHOSTS_GIF
     MOV R1, GAME_OVER_IMG                  ; guarda em R1 o nº do cenário frontal GAME_OVER_IMG
@@ -1476,8 +1481,8 @@ choose_ghost_direction:
 
 
 ; *****************************************************************************************************************************
-; SCORE_CYCLE - Incrementa o contador dos pontos.
-; INÊS ISTO TEM DE TER HAVER COM A INT ROT 1 DESACELERA ISTO
+; SCORE_CYCLE - Incrementa o contador dos pontos cada 5 interrupções 1 para contar em segundos (200ms *  5 = 1 segundo).
+; 
 ; *****************************************************************************************************************************
 score_cycle:
     PUSH R0
@@ -1489,11 +1494,17 @@ score_cycle:
     MOV R0, [int_1]             ; guarda em R0 o valor que indica a occurência da interrupção 1
     CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção occureu
     JNZ exit_score_cycle        ; se não tiver occurido salta para o fim da rotina
+    MOV R0, [COUNT_INT_1]       ; guarda em R0 o número de vezes de lidámos com o interrupção 1 nesta função
+    INC R0                      ; incrementa R0
+    MOV R2, 5                   ; guarda em R2 o valor 5 (cada 5 vezes queremos incrementar o contador)
+    MOD R0, R2                  ; guarda em R0 o resto da divisão inteira por 5
+    MOV [COUNT_INT_1], R0       ; atualiza na memoria o valor de R0
+    JNZ exit_score_cycle        ; se o resto da divisão não for 0 salta para o fim da rotina
     MOV R0, SCORE               ; obtém o endereço da pontuação atual
     MOV R1, [R0]                ; obtém o valor da pontuação atual
     MOV R2, UPPER_LIMIT         ; obtém o valor do limite superior
     CMP R1, R2                  ; determina se o valor atual é o limite superior
-    JZ exit_score_cycle         ; se for, sai da rotina, sem alterar a pontuação
+    JZ time_exceeded            ; se for, salta para time_exceeded para terminar o jogo
     ADD R1, 1                   ; caso contrário, incrementa a pontuação por 1
     MOV R3, MASK_LSD            ; copia a máscara das unidades para R3
     MOV R4, R1                  ; copia valor da pontuação para R4
@@ -1523,6 +1534,11 @@ score_cycle:
         MOV [DISPLAYS], R1      ; atualiza o display
         MOV [R0], R1            ; guarda o novo valor na memória
         JMP exit_score_cycle    ; salta para o fim da rotina
+
+    time_exceeded:
+        CALL end_game                 ; chama a função para terminar o jogo
+        MOV R1, TIME_LIMIT_IMG        ; guarda em R1 o nº do cenário frontal TIME_LIMIT_IMG
+        MOV [SELECT_FRONT_IMG], R1    ; seleciona TIME_LIMIT_IMG como o cenário frontal
 
     exit_score_cycle:
         MOV R0, FALSE           ; guarda em R0 o valor FALSE (0)
