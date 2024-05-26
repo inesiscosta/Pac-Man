@@ -1458,10 +1458,19 @@ delay_loop:
 ; *****************************************************************************************************************************
 int_rot_0:
     PUSH R1                     ; guarda o valor anterior do registo que é alterado nesta função
+    PUSH R0
     
     MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_0], R1             ; sinaliza que a interrupção ocorreu
-    
+    MOV R1, 10                  ; guarda em R1 o valor 10
+    MOV R0, [COUNT_INT_0]       ; guarda em R0 o valor de COUNT_INT_0
+    INC R0                      ; incrementa o valor de COUNT_INT_0
+    CMP R0, R1                  ; compara o valor de COUNT_INT_0 com 10
+    JNZ int_rot_0_end           ; se não for igual a 10, não faz nada
+    MOV R0, 0                   ; se for igual a 10, reseta o contador de interrupções
+    int_rot_0_end:
+        MOV [COUNT_INT_0], R0   ; atualiza o valor de COUNT_INT_0
+    POP R0
     POP R1                      ; recupera o valor anterior do registo modificado
     RFE                         ; Return From Exception
 
@@ -1538,6 +1547,15 @@ spawn_ghosts:
     MOV R5, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
     CMP R3, R5                              ; verifica se já estamos no número máximo
     JZ spawn_ghosts_end                     ; se sim, salta para o fim da rotina
+    CALL pseudo_random                      ; se não, chamamos a função para gerar um número aleatório entre 0 e 15 guardado em R0
+    CMP R6, 3                               ; verifica se o número aleatório é 3
+    JNZ spawn_ghosts_end                    ; se não for 3, salta para o fim da rotina
+    MOV R0, [COUNT_INT_0]                   ; guarda em R0 o número de vezes que lidámos com a interrupção 0
+    MOV R2, 9                               ; guarda em R2 o valor 10
+    CMP R0, R2                              ; verifica se o número de vezes que lidámos com a interrupção 0 é igual a 10
+    JNZ spawn_ghosts_end                    ; se não for igual a 10, salta para o fim da rotina
+    MOV R2, 0                               ; se for igual a 10, reseta o contador de interrupções
+    MOV [COUNT_INT_0], R2                   ; reseta o contador de interrupções
     MOV R8, 0                               ; vamos começar por ver o fantasma 0
     for_max_ghosts:
         CMP R5, 0                           ; verifica se já vimos todos os ghosts
@@ -1550,16 +1568,6 @@ spawn_ghosts:
             MOV R7, [R9]                    ; R7 guarda o valor indicador de se o fantasma está vivo
             CMP R7, 1                       ; verifica se o fantasma está vivo
             JZ next_ghost                   ; se estiver, vamos ver o próximo ghost
-            CALL pseudo_random              ; se não, chamamos a função para gerar um número aleatório entre 0 e 15 guardado em R0
-            CMP R6, 3                       ; verifica se o número aleatório é 3
-            JNZ next_ghost                  ; se não, vamos para o próximo fantasma
-            CALL pseudo_random              ; gera outro número aleatório
-    random_delay_loop:                      
-            CMP R6, 0                       ; compara o número com 0
-            JZ  continue                    ; se for 0 salta para continue
-            CALL delay                      ; se não chama um delay
-            DEC R6                          ; decrementa R6
-            JNZ random_delay_loop           ; repete até R6 == 0
     continue:
             MOV R7, R8                      ; cria uma cópia de R8 que será alterada
             MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar 
@@ -1579,6 +1587,7 @@ spawn_ghosts:
             MOV R2, 1                       ; guarda em R2 o valor 1 que o fantasma estar vivo
             MOV [R9], R2                    ; atualizamos o estado do ghost para alive
             INC R3                          ; incrementa o número de alive ghosts
+            JMP spawn_ghosts_end            ; salta para o fim da rotina
         next_ghost:
             INC R8                          ; próximo fantasma
             DEC R5                          ; decrementa o valor de R3 para avançar o for loop
@@ -1619,16 +1628,14 @@ ghost_cycle:
     CMP R0, TRUE                            ; se o valor for igual a TRUE (1), então a interrupção ocorreu
     JNZ exit_ghost_cycle                    ; se não tiver occurido salta para o fim da rotina
     MOV R0, [COUNT_INT_0]                   ; guarda em R0 o número de vezes de lidámos com o interrupção 0 nesta função
-    INC R0                                  ; incrementa R0
     MOV R2, GHOST_RYTHM                     ; guarda em R2 o valor 8 (cada X vezes queremos mexer o fantasma)
     MOD R0, R2                              ; guarda em R0 o resto da divisão inteira por 10
-    MOV [COUNT_INT_0], R0                   ; atualiza na memoria o valor de R0
     JNZ exit_ghost_cycle                    ; se o resto da divisão não for 0 salta para o fim da rotina
     MOV R3, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
     MOV R0, 0                               ; vamos começar pelo fantasma 0
     check_all_ghosts:
-        CMP R3, 0                       ; verifica se já vimos todos os ghosts
-        JZ exit_ghost_cycle             ; se já, saltamos para o fim da rotina
+        CMP R3, 0                           ; verifica se já vimos todos os ghosts
+        JZ exit_ghost_cycle                 ; se já, saltamos para o fim da rotina
         MOV R9, R0                      ; cria uma cópia de R0 que será editada
         MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts
         SHL R9, 1                       ; multiplica o valor de R9 por dois (2 porque WORD)
