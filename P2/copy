@@ -13,7 +13,7 @@ TRUE                   EQU 1           ; valor numérico para representar TRUE (
 FALSE                  EQU 0           ; valor numérico para representar FALSE (0)
 DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar a animação do movimento
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
-MAX_GHOSTS             EQU 4           ; número máximo de fantasmas premitidos em jogo (0-4)
+MAX_GHOSTS             EQU 1           ; número máximo de fantasmas premitidos em jogo (0-4)
 INITAL_NUM_GHOSTS      EQU 0           ; número de fantasmas inicalmente em jogo
 MASK_2B                EQU 3           ; mascara para isolar os 2 bits de menor peso
 
@@ -287,11 +287,12 @@ DEF_CANDY_POSITIONS:
     WORD        CANDY4_LIN
     WORD        CANDY4_COL
 
+INVICIBILITY:         WORD 0            ; guarda o valor que mostra se o pacman é invencível ou não (1 invencível)
 REMAINING_CANDIES:    WORD 4            ; guarda o número de rebuçados em jogo
 NUM_GHOSTS:           WORD 0            ; guarda o número de fantasmas em jogo
 SCORE:                WORD 0            ; guarda a pontução do jogo
+COUNT_INT_0:          WORD 0            ; guarda o número de vezes que lidámos com a count_int_0 (resets a INES)
 COUNT_INT_1:          WORD 0            ; guarda o número de vezes que lidámos com a count_int_1 (resets a 5)
-COUNT_INT_2:          WORD 0            ; guarda o número de vezes que lidámos com a count_int_2 (resets a 5)
 
 ; Posições Atuais
 PAC_LIN:        WORD PAC_START_LIN      ; guarda a linha atual do pacman, inicializada a PAC_START_LIN
@@ -965,7 +966,7 @@ move_object:
     PUSH R6
     PUSH R9
 
-    CALL choose_object_action   ; chama a função que verifica que tipo de movimento o objeto está a tentar ultrapassar algum limite com este movimento
+    CALL choose_object_action    ; chama a função que verifica que tipo de movimento o objeto está a tentar ultrapassar algum limite com este movimento
     CMP R0, FALSE               ; compara o retorno da função (R0) com o valor para FALSE
     JZ end_movement             ; se a função retornar false, saltamos para end_movement pois o movimento é proíbido
     CALL delete_object          ; se não, apaga o objeto
@@ -1110,23 +1111,55 @@ delete_candy:
         RET
 
 ; *****************************************************************************************************************************
-; EXPLOSTION - Apaga o pacman e mostra uma explosão
-; Argumentos: R1 - linha do pacman
-;             R2 - coluna do pacman
-;             R4 - tabela que define o pacman
-;
+; EXPLOSTION - Verifica qual o fantasma que o pacman apanhou e vê se morre ou congela o fantasma
+; Argumentos:  R0 - O fantasma que o pacman encontrou
 ; *****************************************************************************************************************************
 explosion:
+    PUSH R1
+    PUSH R2
+    PUSH R3
     PUSH R4
+    PUSH R5
+    MOV R5, [INVICIBILITY]
+    CMP R5, 0
+    JNZ kill_ghost
     CALL delete_object
     MOV R4, DEF_EXPLOSION
     CALL draw_object
     CALL delete_object
-    CALL end_game
     JMP exit_explosion
 
+kill_ghost:
+    CMP R0, 3
+    JZ kill_ghost_l_blue
+    CMP R0, 4
+    JZ kill_ghost_l_red
+    CMP R0, 5
+    JZ kill_ghost_orange
+    CMP R0, 6
+    JZ kill_ghost_pink
+
+kill_ghost_l_blue:
+
+kill_ghost_l_red:
+
+kill_ghost_orange:
+
+kill_ghost_pink:
+
 exit_explosion:
+    POP R5
     POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
+; *****************************************************************************************************************************
+; VICTORY - ???
+; 
+; *****************************************************************************************************************************
+victory:
     RET
 
 ; *****************************************************************************************************************************
@@ -1436,13 +1469,6 @@ end_game:
     RET
 
 ; *****************************************************************************************************************************
-; VICTORY - ???
-; 
-; *****************************************************************************************************************************
-victory:
-    RET
-
-; *****************************************************************************************************************************
 ; DELAY - Introduz um delay
 ; *****************************************************************************************************************************
 delay:
@@ -1515,7 +1541,6 @@ ghost_cycle:
     PUSH R8
     PUSH R9
     PUSH R10
-    PUSH R11
 
     MOV R0, [int_0]             ; guarda em R0 o valor que indica a occurência da interrupção 0
     CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção occureu
@@ -1541,13 +1566,12 @@ ghost_cycle:
             MOV R10, R7                     ; guardamos uma cópia do endereço da linha
             MOV R1, [R7]                    ; linha do fantasma em causa
             ADD R7, 2                       ; endereço da coluna
-            MOV R11, R7                     ; guardamos uma cópia do endereço da coluna
             MOV R2, [R7]                    ; coluna do fantasma em causa
             ADD R7, 2                       ; endereço da tabela que define o fantasma 
             MOV R4, [R7]                    ; guarda o endereço da tabela que define o fantasma em R4
             CALL animate_ghost              ; chama a função que anima o fantasma
             MOV [R10], R1                   ; atualiza a memória com a nova linha atual do fantasma (pós movimento)
-            MOV [R11], R2                    ; atualiza a memória com a nova coluna atual do fantasma (pós movimento)
+            MOV [R7], R2                    ; atualiza a memória com a nova coluna atual do fantasma (pós movimento)
             INC R3                          ; incrementa o número de alive ghosts
         next_ghost2:
             INC R0                          ; próximo fantasma
@@ -1557,7 +1581,6 @@ ghost_cycle:
     exit_ghost_cycle:
         MOV R0, FALSE           ; guarda em R0 o valor FALSE (0)
         MOV [int_0], R0         ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
-        POP R11
         POP R10
         POP R9
         POP R8
