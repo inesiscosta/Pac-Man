@@ -15,7 +15,6 @@ DELAY                  EQU 05000H      ; numero de ciclos de delay para atrasar 
 DISPLAYS               EQU 0A000H      ; endereço dos displays de 7 segmentos (periférico POUT-1)
 MAX_GHOSTS             EQU 4           ; número máximo de fantasmas premitidos em jogo (0-4)
 INITAL_NUM_GHOSTS      EQU 0           ; número de fantasmas inicalmente em jogo
-MASK_2B                EQU 3           ; mascara para isolar os 2 bits de menor peso
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
@@ -44,12 +43,15 @@ GAME_BACKGROUND        EQU 1           ; imagem para o fundo do jogo
 PAUSED_IMG             EQU 2           ; imagem frontal para quando o jogo está em pausa
 GAME_OVER_IMG          EQU 3           ; imagem frontal para quando o jogador perde
 TIME_LIMIT_IMG         EQU 4           ; imagem frontal para quando o jogador perde por tempo
+VICTORY_IMG            EQU 5           ; imagem de fundo para vitória
 
 ; Sons / GIFs
 PACMAN_THEME           EQU 0           ; música do jogo
 PACMAN_CHOMP           EQU 1           ; som do pacman a movimentar-se
 GHOSTS_GIF             EQU 2           ; GIF GAME OVER
 GAME_OVER_SOUND        EQU 3           ; som game_over
+WIN_SOUND              EQU 4           ; som vitória
+EAT_CANDY              EQU 5           ; som de comer candy
 
 ; Controlos
 UP_LEFT_KEY            EQU 11H         ; key 0 for moving up and left
@@ -290,8 +292,10 @@ DEF_CANDY_POSITIONS:
 REMAINING_CANDIES:    WORD 4            ; guarda o número de rebuçados em jogo
 NUM_GHOSTS:           WORD 0            ; guarda o número de fantasmas em jogo
 SCORE:                WORD 0            ; guarda a pontução do jogo
+COUNT_INT_0:          WORD 0            ; guarda o número de vezes que lidámos com a count_int_0 (resets a 10)
 COUNT_INT_1:          WORD 0            ; guarda o número de vezes que lidámos com a count_int_1 (resets a 5)
 COUNT_INT_2:          WORD 0            ; guarda o número de vezes que lidámos com a count_int_2 (resets a 5)
+EXPLOSION_EVENT:      WORD 0            ; indica se a explosão já ocorreu, 0 se não, 1 se sim
 
 ; Posições Atuais
 PAC_LIN:        WORD PAC_START_LIN      ; guarda a linha atual do pacman, inicializada a PAC_START_LIN
@@ -375,6 +379,7 @@ spawn_pacman:
 EI                                      ; ativa interrupções
 
 main: ; ciclo principal
+    CALL check_explosion                ; chama a função que apaga a explosão passado 1.5 segundos
     CALL keyboard                       ; chama a função do teclado para indentificar a tecla pressionada (valor guardado em R0)
     CALL game_state_key                 ; chama uma função para detetar se a tecla pressionada é uma tecla que altera o estado do jogo e executa a ação associada
     CALL movement_key                   ; chama uma função para detetar se a tecla pressionada é uma tecla de movimento e executar a ação associada
@@ -415,8 +420,8 @@ spawn_ghosts:
             MOV R7, [R9]                    ; R7 guarda o valor indicador de se o fantasma está vivo
             CMP R7, 1                       ; verifica se o fantasma está vivo
             JZ next_ghost                   ; se estiver, vamos ver o próximo ghost
-            CALL pseudo_random              ; se não, chamamos a função para gerar um número aleatório entre 0 e 3 guardado em R0
-            CMP R6, 3                       ; verifica se o número aleatório é 3
+            CALL pseudo_random              ; se não, chamamos a função para gerar um número aleatório entre 0 e 15 guardado em R0
+            CMP R6, 7                       ; verifica se o número aleatório é 3
             JNZ next_ghost                  ; se não, vamos para o próximo fantasma
             MOV R7, R8                      ; cria uma cópia de R8 que será alterada
             MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar 
@@ -1008,11 +1013,13 @@ move_pacman:
     CMP R0, 3
     JLT check_pacman_candy
     CALL explosion
-    JMP new_position_pacman
+    JMP end_pacman_movement
 
 check_pacman_candy:
     CMP R0, 2
     JNZ new_position_pacman
+    MOV R0, EAT_CANDY
+    MOV [PLAY_MEDIA], R0
     CALL delete_candy
     MOV R10, [REMAINING_CANDIES]
     SUB R10, 1
@@ -1110,7 +1117,7 @@ delete_candy:
         RET
 
 ; *****************************************************************************************************************************
-; EXPLOSTION - Apaga o pacman e mostra uma explosão
+; EXPLOSTION - Apaga o pacman, mostra uma explosão e altera EXPLOSION_EVENT para refletir que a explosão já ocorreu.
 ; Argumentos: R1 - linha do pacman
 ;             R2 - coluna do pacman
 ;             R4 - tabela que define o pacman
@@ -1121,11 +1128,8 @@ explosion:
     CALL delete_object
     MOV R4, DEF_EXPLOSION
     CALL draw_object
-    CALL delete_object
-    CALL end_game
-    JMP exit_explosion
-
-exit_explosion:
+    MOV R4, TRUE
+    MOV [EXPLOSION_EVENT], R4
     POP R4
     RET
 
@@ -1436,10 +1440,24 @@ end_game:
     RET
 
 ; *****************************************************************************************************************************
-; VICTORY - ???
-; 
+; VICTORY - Termina o jogo com um ecrã de vitória.
+; ATUALIZA o estado de jogo para WON e mostra o ecrã de vitória.
 ; *****************************************************************************************************************************
 victory:
+    PUSH R1
+    DI                                     ; desativa interrupções
+    DI0                                    ; desativa a interrupção a 0
+    DI1                                    ; desativa a interrupção a 1
+    DI2                                    ; desativa a interrupção a 2
+    DI3                                    ; desativa a interrupção a 3
+    MOV R1, WIN_SOUND                      ; guarda em R1 o nº do som WIN_SOUND
+    MOV [PLAY_MEDIA], R1                   ; toca o som win
+    MOV R1, VICTORY_IMG                    ; guarda em R1 o nº do video GHOSTS_GIF
+    MOV [SELECT_BACKGROUND_IMG], R1        ; seleciona VICTORY_IMG como o fundo
+    MOV [DELETE_SCREEN], R1                ; apaga todos os pixels do ecrã (o valor de R1 é irrelevante)
+    MOV R1, WON                            ; guarda em R1 o valor do estado WON
+    MOV [GAME_STATE], R1                   ; atualiza o estado atual do jogo para WON
+    POP R1
     RET
 
 ; *****************************************************************************************************************************
@@ -1479,7 +1497,7 @@ int_rot_1:
 
 ; *****************************************************************************************************************************
 ; INT_ROT_2 - Rotina de atendimento da interrupção 2
-;			  ???
+;             Usada sinalizar contar o tempo que a explosão fica vísivel.
 ; *****************************************************************************************************************************
 int_rot_2:
     PUSH R1
@@ -1490,7 +1508,7 @@ int_rot_2:
 
 ; *****************************************************************************************************************************
 ; INT_ROT_3 - Rotina de atendimento da interrupção 3
-;			  ???
+
 ; *****************************************************************************************************************************
 int_rot_3:
     PUSH R1
@@ -1500,8 +1518,8 @@ int_rot_3:
     RFE                         ; Return From Exception
 
 ; *****************************************************************************************************************************
-; GHOST_CYCLE - Escolhe que fantasmas se vão movimentar após uma interrupção e chama a função para os mexer.
-;
+; GHOST_CYCLE - Escolhe que fantasmas se vão movimentar após uma interrupção e chama a função para os mexer. Vão evoluir de
+;               3.2 em 3.2 segundos.
 ; *****************************************************************************************************************************
 ghost_cycle:
     PUSH R0
@@ -1516,10 +1534,15 @@ ghost_cycle:
     PUSH R9
     PUSH R10
     PUSH R11
-
     MOV R0, [int_0]             ; guarda em R0 o valor que indica a occurência da interrupção 0
-    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção occureu
+    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção ocorreu
     JNZ exit_ghost_cycle        ; se não tiver occurido salta para o fim da rotina
+    MOV R0, [COUNT_INT_0]       ; guarda em R0 o número de vezes de lidámos com o interrupção 0 nesta função
+    INC R0                      ; incrementa R0
+    MOV R2, 8                   ; guarda em R2 o valor 8 (cada 8 vezes queremos mexer o fantasma)
+    MOD R0, R2                  ; guarda em R0 o resto da divisão inteira por 10
+    MOV [COUNT_INT_0], R0       ; atualiza na memoria o valor de R0
+    JNZ exit_ghost_cycle        ; se o resto da divisão não for 0 salta para o fim da rotina
     MOV R3, MAX_GHOSTS          ; guarda o numero máximo de fantasmas
     MOV R0, 0                   ; vamos começar pelo fantasma 0
     for_max_ghosts2:
@@ -1654,7 +1677,7 @@ score_cycle:
     PUSH R4
     
     MOV R0, [int_1]             ; guarda em R0 o valor que indica a occurência da interrupção 1
-    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção occureu
+    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção ocorreu
     JNZ exit_score_cycle        ; se não tiver occurido salta para o fim da rotina
     MOV R0, [COUNT_INT_1]       ; guarda em R0 o número de vezes de lidámos com o interrupção 1 nesta função
     INC R0                      ; incrementa R0
@@ -1714,7 +1737,7 @@ score_cycle:
 
 
 ;*****************************************************************************************************************************
-; PSEUDO_RANDOM - Gera um número pseudo-aleatório entre 0 e 3.
+; PSEUDO_RANDOM - Gera um número pseudo-aleatório entre 0 e 15.
 ; Retorna: R6 - o número pseudo-aleatório
 ;               
 ; *****************************************************************************************************************************
@@ -1723,7 +1746,42 @@ pseudo_random:
 	MOV  R1, KEY_COL ; periférico PIN
     MOVB R6, [R1]    ; lê o periférico
     SHR R6, 4        ; faz shift dos bits no ar para as casas de menor peso
-    MOV R1, MASK_2B  ; máscara para isolar os dois bits de menor peso
-    AND R6, R1       ; aplica a mascasra guardando assim em R0 um valor aleatório entre 0 e 3
     POP R1
+    RET
+
+; *****************************************************************************************************************************
+; CHECK_EXPLOSION - Verifica se a explosão já ocorreu e apaga-a passado 1.5 segundos.
+;  
+; *****************************************************************************************************************************
+check_explosion:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R4
+    MOV R0, TRUE                ; guarda o valor de TRUE (1) em R0
+    MOV R4, [EXPLOSION_EVENT]   ; guarda em R4 o valor que indica se a explosão já ocorreu
+    CMP R4, R0                  ; verifica se a explosão já ocorreu
+    JNZ exit_check_explosion    ; se não, salta para o fim da rotina
+    MOV R0, [int_2]             ; se sim, guarda em R0 o valor que indica a occurência da interrupção 2
+    CMP R0, TRUE                ; se o valor for igual a TRUE (1), então a interrupção ocorreu
+    JNZ exit_check_explosion    ; se não tiver occurido salta para o fim da rotina
+    MOV R0, [COUNT_INT_2]       ; guarda em R0 o número de vezes de lidámos com o interrupção 2 nesta função
+    INC R0                      ; incrementa R0
+    MOV R2, 500                 ; guarda em R2 o valor 5 (cada 5 vezes queremos incrementar o contador)
+    MOD R0, R2                  ; guarda em R0 o resto da divisão inteira por 5
+    MOV [COUNT_INT_2], R0       ; atualiza na memoria o valor de R0
+    JNZ exit_check_explosion    ; se o resto da divisão não for 0 salta para o fim da rotina
+    MOV R1, FALSE               ; guarda o valor de TRUE (1) em R1
+    MOV [EXPLOSION_EVENT], R1   ; atualiza a memória com o valor FALSE (0) 
+    MOV R1, [PAC_LIN]           ; guarda em R1 a linha onde a explosão ocorreu
+    MOV R2, [PAC_COL]           ; guarda em R2 a coluna onde a explosão ocorreu
+    MOV R4, DEF_EXPLOSION       ; guarda em R4 a tabela que define a explosão
+    CALL delete_object          ; chama a função para apagar a explosão
+    CALL end_game               ; chama a função para terminar o jogo
+
+exit_check_explosion:
+    POP R4
+    POP R2
+    POP R1
+    POP R0
     RET
