@@ -546,7 +546,7 @@ end_movement:
 ; DRAW_CENTER_BOX - Desenha a caixa central onde nasce o pacman.
 ; *****************************************************************************************************************************
 draw_center_box:
-    PUSH R1
+    PUSH R1                            ; guarda os valores anteriores dos registos que são alterados nesta função
     PUSH R2
     PUSH R3
     PUSH R4
@@ -593,7 +593,7 @@ draw_horizontal_lines:
     JMP draw_horizontal_lines           ; saltamos para draw_horizontal_lines para desenhar o lado direito da caixa
 
 end_draw_center_box:
-    POP R8
+    POP R8                              ; recupera os valores anteriores dos registos modificados
     POP R7
     POP R6
     POP R5
@@ -1264,7 +1264,7 @@ game_state_key:
 ; pausa. Para além disso pausa todos os sons.
 ; *****************************************************************************************************************************
 pause_game:
-    PUSH R1                                 ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                                 ; guarda o valor anterior do registo que é alterado nesta função
 
     DI                                      ; desativa interrupções
     MOV [PAUSE_ALL_SOUND], R1               ; pausa a reprodução de todos os sons (o valor de R1 é irrelevante)          
@@ -1282,7 +1282,7 @@ pause_game:
 ; pausa. Para além disso resume a reprodução da música de fundo PACMAN THEME.
 ; *****************************************************************************************************************************
 resume_game:
-    PUSH R1                                ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                                ; guarda o valor anterior do registo que é alterado nesta função
 
     EI                                     ; reativa interrupções
     MOV R1, PACMAN_THEME                   ; guarda em R1 o nº do som PACMAN THEME
@@ -1301,7 +1301,7 @@ resume_game:
 ; de GAME OVER. Para de aceitar interrupções
 ; *****************************************************************************************************************************
 end_game:
-    PUSH R1                                ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                                ; guarda o valor anterior do registo que é alterado nesta função
 
     DI                                     ; desativa interrupções
     DI0                                    ; desativa a interrupção a 0
@@ -1326,7 +1326,7 @@ end_game:
 ; ATUALIZA o estado de jogo para WON e mostra o ecrã de vitória.
 ; *****************************************************************************************************************************
 victory:
-    PUSH R1                                ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                                ; guarda o valor anterior do registo que é alterado nesta função
 
     DI                                     ; desativa interrupções
     DI0                                    ; desativa a interrupção a 0
@@ -1363,7 +1363,7 @@ delay_loop:
 ;			  Usada para sinalizar que os fantasmas devem ser movidos.
 ; *****************************************************************************************************************************
 int_rot_0:
-    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                     ; guarda o valor anterior do registo que é alterado nesta função
     
     MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_0], R1             ; sinaliza que a interrupção ocorreu
@@ -1376,7 +1376,7 @@ int_rot_0:
 ;			  Usada sinalizar que o contador tem de atualizado.
 ; *****************************************************************************************************************************
 int_rot_1:
-    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                     ; guarda o valor anterior do registo que é alterado nesta função
 
     MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_1], R1             ; sinaliza que a interrupção ocorreu
@@ -1389,7 +1389,7 @@ int_rot_1:
 ;             Usada sinalizar contar o tempo que a explosão fica vísivel.
 ; *****************************************************************************************************************************
 int_rot_2:
-    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                     ; guarda o valor anterior do registo que é alterado nesta função
 
     MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_2], R1             ; sinaliza que a interrupção ocorreu
@@ -1402,7 +1402,7 @@ int_rot_2:
 ;
 ; *****************************************************************************************************************************
 int_rot_3:
-    PUSH R1                     ; guarda o valore anterior do registo que é alterado nesta função
+    PUSH R1                     ; guarda o valor anterior do registo que é alterado nesta função
 
     MOV R1, 1                   ; guarda em R1 o valor 1
     MOV [int_3], R1             ; sinaliza que a interrupção ocorreu
