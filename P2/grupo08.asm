@@ -18,6 +18,7 @@ INITAL_NUM_GHOSTS      EQU 0           ; número de fantasmas inicalmente em jog
 NUM_COL                EQU 64          ; número decimal do número de colunas no ecrã
 MIDDLE_LIN             EQU 10H         ; número hexadecimal para a linha a meio do ecrã
 MIDDLE_COL             EQU 20H         ; número hexadecimal para a coluna a meio do ecrã
+GHOST_RYTHM            EQU 6            ; mude o valor para mudar a velocidade de evolução dos fantasmas ((clock * GHOST_RYTHM) / 1000 = evolução fantasmas em segundos, clock = 500 ms)
 
 ; MediaCenter
 DEF_LINE    		   EQU 600AH       ; endereço do comando para definir a linha
@@ -1457,8 +1458,16 @@ spawn_ghosts:
             CMP R7, 1                       ; verifica se o fantasma está vivo
             JZ next_ghost                   ; se estiver, vamos ver o próximo ghost
             CALL pseudo_random              ; se não, chamamos a função para gerar um número aleatório entre 0 e 15 guardado em R0
-            CMP R6, 7                       ; verifica se o número aleatório é 3
+            CMP R6, 3                       ; verifica se o número aleatório é 3
             JNZ next_ghost                  ; se não, vamos para o próximo fantasma
+            CALL pseudo_random              ; gera outro número aleatório
+    random_delay_loop:                      
+            CMP R6, 0                       ; compara o número com 0
+            JZ  continue                    ; se for 0 salta para continue
+            CALL delay                      ; se não chama um delay
+            DEC R6                          ; decrementa R6
+            JNZ random_delay_loop           ; repete até R6 == 0
+    continue:
             MOV R7, R8                      ; cria uma cópia de R8 que será alterada
             MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar 
             MUL R7, R4                      ; se for 3, obtemos a posição relativa ao topo da tabela GHOST_POS da linha do fantasma em causa
@@ -1518,48 +1527,48 @@ ghost_cycle:
     JNZ exit_ghost_cycle                    ; se não tiver occurido salta para o fim da rotina
     MOV R0, [COUNT_INT_0]                   ; guarda em R0 o número de vezes de lidámos com o interrupção 0 nesta função
     INC R0                                  ; incrementa R0
-    MOV R2, 8                               ; guarda em R2 o valor 8 (cada 8 vezes queremos mexer o fantasma)
+    MOV R2, GHOST_RYTHM                     ; guarda em R2 o valor 8 (cada X vezes queremos mexer o fantasma)
     MOD R0, R2                              ; guarda em R0 o resto da divisão inteira por 10
     MOV [COUNT_INT_0], R0                   ; atualiza na memoria o valor de R0
     JNZ exit_ghost_cycle                    ; se o resto da divisão não for 0 salta para o fim da rotina
     MOV R3, MAX_GHOSTS                      ; guarda o numero máximo de fantasmas
     MOV R0, 0                               ; vamos começar pelo fantasma 0
-    for_max_ghosts2:
+    check_all_ghosts:
         CMP R3, 0                           ; verifica se já vimos todos os ghosts
         JZ exit_ghost_cycle                 ; se já, saltamos para o fim da rotina
-        check_aliveness2:
-            MOV R9, R0                      ; cria uma cópia de R0 que será editada
-            MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts
-            SHL R9, 1                       ; multiplica o valor de R9 por dois (2 porque WORD)
-            ADD R9, R1                      ; endereço do valor indentificador da "aliveness" do fantasma em questão
-            MOV R7, [R9]                    ; R7 guarda o valor indicador de se o fantasma está vivo
-            CMP R7, 1                       ; verifica se o fantasma está vivo
-            JNZ next_ghost2                 ; se não estiver, vamos ver o próximo ghost
-            MOV R7, R0                      ; se estiver vivo, cria uma cópia de R0 que será alterada
-            MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar
-            MUL R7, R4                      ; obtemos a posição relativa ao topo da tabela GHOST_POS da linha do fantasma em causa
-            MOV R4, GHOST_POS               ; endereço da tabela ghost_pos
-            ADD R7, R4                      ; endereço da linha do fantasma em causa 
-            MOV R10, R7                     ; guardamos uma cópia do endereço da linha
-            MOV R1, [R7]                    ; linha do fantasma em causa
-            ADD R7, 2                       ; endereço da coluna
-            MOV R11, R7                     ; guardamos uma cópia do endereço da coluna
-            MOV R2, [R7]                    ; coluna do fantasma em causa
-            ADD R7, 2                       ; endereço da tabela que define o fantasma 
-            MOV R4, [R7]                    ; guarda o endereço da tabela que define o fantasma em R4
-            CALL animate_ghost              ; chama a função que anima o fantasma
-            MOV [R10], R1                   ; atualiza a memória com a nova linha atual do fantasma (pós movimento)
-            MOV [R11], R2                   ; atualiza a memória com a nova coluna atual do fantasma (pós movimento)
-            INC R3                          ; incrementa o número de alive ghosts
-        next_ghost2:
-            INC R0                          ; próximo fantasma
-            DEC R3                          ; decrementa o valor de R3 para avançar o for loop
-            JMP for_max_ghosts2             ; salta para o inicio do "for" loop
+        MOV R9, R0                      ; cria uma cópia de R0 que será editada
+        MOV R1, ALIVE_GHOSTS            ; endereço da tabela alive_ghosts
+        SHL R9, 1                       ; multiplica o valor de R9 por dois (2 porque WORD)
+        ADD R9, R1                      ; endereço do valor que indentifica se o fantasma em questão está vivo ou não
+        MOV R7, [R9]                    ; R7 guarda o valor indicador de se o fantasma está vivo
+        CMP R7, 1                       ; verifica se o fantasma está vivo
+        JNZ check_next_ghost            ; se não estiver, vamos ver o próximo ghost
+        MOV R7, R0                      ; se estiver vivo, cria uma cópia de R0 que será alterada
+        MOV R4, 6                       ; guarda em R4 o número 3 que é o que queremos multiplicar
+        MUL R7, R4                      ; obtemos a posição relativa ao topo da tabela GHOST_POS da linha do fantasma em causa
+        MOV R4, GHOST_POS               ; endereço da tabela ghost_pos
+        ADD R7, R4                      ; endereço da linha do fantasma em causa 
+        MOV R10, R7                     ; guardamos uma cópia do endereço da linha
+        MOV R1, [R7]                    ; linha do fantasma em causa
+        ADD R7, 2                       ; endereço da coluna
+        MOV R11, R7                     ; guardamos uma cópia do endereço da coluna
+        MOV R2, [R7]                    ; coluna do fantasma em causa
+        ADD R7, 2                       ; endereço da tabela que define o fantasma 
+        MOV R4, [R7]                    ; guarda o endereço da tabela que define o fantasma em R4
+        CALL animate_ghost              ; chama a função que anima o fantasma
+        MOV [R10], R1                   ; atualiza a memória com a nova linha atual do fantasma (pós movimento)
+        MOV [R11], R2                   ; atualiza a memória com a nova coluna atual do fantasma (pós movimento)
+        INC R3                          ; incrementa o número de alive ghosts
+    
+    check_next_ghost:
+        INC R0                          ; próximo fantasma
+        DEC R3                          ; decrementa o valor de R3 para avançar o loop
+        JMP check_all_ghosts            ; salta para o inicio do loop
     
     exit_ghost_cycle:
-        MOV R0, FALSE                       ; guarda em R0 o valor FALSE (0)
-        MOV [int_0], R0                     ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
-        POP R11                             ; recupera os valores anteriores dos registos modificados
+        MOV R0, FALSE                   ; guarda em R0 o valor FALSE (0)
+        MOV [int_0], R0                 ; repõem o indicador de occurência da interrupção a 0 uma vez que já lidámos com ela
+        POP R11                         ; recupera os valores anteriores dos registos modificados
         POP R10
         POP R9
         POP R8
