@@ -139,7 +139,7 @@ GAME_OVER              EQU 4                    ; indicates that the game has en
 ; *****************************************************************************************************************************
     PLACE 1000H
 
-stack:
+pilha:
     STACK 200H                                  ; reserved space for the stack (200H bytes, as they are 100H words)
 
 SP_initial:                                     ; this is the address (1200H) with which the SP should be initialized. the 1st return address will be stored in 11FEH (1200H-2)

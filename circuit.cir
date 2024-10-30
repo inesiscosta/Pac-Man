@@ -10,13 +10,13 @@
   "primary screen width" : 1680,
   "primary screen height" : 1050,
   "window" : {
-    "X absolute" : 840,
+    "X absolute" : 0,
     "Y absolute" : 25,
-    "X relative" : 840,
+    "X relative" : 0,
     "Y relative" : 25,
-    "width" : 840,
+    "width" : 1680,
     "height" : 1025,
-    "leftRightDividerLocation" : 115,
+    "leftRightDividerLocation" : 314,
     "topBottomDividerLocation" : 856
   },
   "connections" : [ {
@@ -740,10 +740,10 @@
     "positionX" : 226,
     "positionY" : 98,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 0,
-    "simGuiYRelative" : 25,
-    "simGuiWidth" : 840,
-    "simGuiHeight" : 1025,
+    "simGuiXRelative" : 240,
+    "simGuiYRelative" : 155,
+    "simGuiWidth" : 867,
+    "simGuiHeight" : 848,
     "clockPeriod" : 200,
     "startAutomatically" : true,
     "simulationMaster" : true,
@@ -772,7 +772,7 @@
       "pinConnectionID" : -1,
       "pinValueFixed" : "1"
     },
-    "programFilePathName" : "grupo08.asm",
+    "programFilePathName" : "pacman.asm",
     "nTabSpaces" : 4,
     "bus interface" : {
       "className" : "ModuleExtensionMasterBusReadWrite",
@@ -1496,7 +1496,11 @@
     "moduleDelay" : 5,
     "positionX" : 898,
     "positionY" : 406,
-    "simGuiVisibleInSimulation" : false,
+    "simGuiVisibleInSimulation" : true,
+    "simGuiXRelative" : 4,
+    "simGuiYRelative" : 25,
+    "simGuiWidth" : 213,
+    "simGuiHeight" : 178,
     "nHexaDigits" : 3,
     "onColor" : "Red",
     "zColor" : "Black_White",
@@ -1530,39 +1534,39 @@
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
     "defaultPenColor" : 61455,
-    "image paths" : [ "START.jpg", "Background.jpg", "PAUSED.PNG", "GAME_OVER.PNG", "OVER_BY_TIME.PNG", "WIN.jpg" ],
+    "image paths" : [ "assets/images/start.png", "assets/images/background.png", "assets/images/paused.png", "assets/images/game_over.png", "assets/images/over_by_time.png", "assets/images/win.png" ],
     "sounds/videos settings" : [ {
-      "filePathName" : "pacman_theme.wav",
+      "filePathName" : "assets/sound/pacman_theme.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "pacman_chomp.wav",
+      "filePathName" : "assets/sound/pacman_chomp.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "GHOSTS.gif",
+      "filePathName" : "assets/images/ghosts.gif",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "game_over.mp3",
+      "filePathName" : "assets/sound/game_over.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "WIN_SOUND.wav",
+      "filePathName" : "assets/sound/win.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "pacman_eatfruit.wav",
+      "filePathName" : "assets/sound/pacman_eatfruit.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
