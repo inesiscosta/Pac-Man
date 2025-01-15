@@ -1,23 +1,18 @@
 # Pac-Man Modified
 Computer Architecture class project. A modified version of the classic game Pac-Man written in PEPE-16 Assembly.
+The goal is to eat all 4 pieces of candy without getting caught by a ghost. If a ghost touches you GAME OVER. 
 
 ## Prerequisites
 
 To run the program, you need to have an appropriate Java version installed. This project requires Java with JavaFX support. If you have more than one Java version installed, ensure you set the path to the appropriate one.
 
-## Running the Simulator
+## Keybinds
+Normal 3x3 grid for movement and then:
+- `C`to Start
+- `D`to Pause
+- `E`to End Game
 
-### If Java Path is Set Globally
+## Demo
+https://github.com/user-attachments/assets/a4633438-94b2-4e2f-a2e1-454167eb1a92
 
-If your Java path is set globally to the one with JavaFX, you can use the UI and just double-click on the [simulator.jar](http://_vscodecontentref_/1).
-
-### If Java Path is Not Set Globally
-
-Navigate to the directory that contains the [simulator.jar](http://_vscodecontentref_/2) and run the following command:
-
-- **Windows**:
-  ```sh
-  "C:\path\to\java\bin\java.exe" -jar simulator.jar
-- **Unix(MacOS / Linux)**:
-    ```sh
-    /path/to/java/bin/java -jar simulator.jar
+To run this program on your machine check the prerequisites and then open src/simulator.jar load circuit.cir and start the simulation.
