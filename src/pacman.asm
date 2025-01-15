@@ -95,13 +95,13 @@ GHOST3_START_COL       EQU 58                   ; initial column of ghost 3 (nex
 BOX_LIN                EQU 11                   ; row of the box
 BOX_COL	               EQU 26                   ; column of the box
 CANDY1_LIN             EQU  1                   ; row of the 1st candy
-CANDY1_COL		       EQU  1                   ; column of the 1st candy
+CANDY1_COL             EQU  1                   ; column of the 1st candy
 CANDY2_LIN             EQU  1                   ; row of the 2nd candy
-CANDY2_COL		       EQU  59                  ; column of the 2nd candy
+CANDY2_COL             EQU  59                  ; column of the 2nd candy
 CANDY3_LIN             EQU  27                  ; row of the 3rd candy
-CANDY3_COL		       EQU  1                   ; column of the 3rd candy
+CANDY3_COL             EQU  1                   ; column of the 3rd candy
 CANDY4_LIN             EQU  27                  ; row of the 4th candy
-CANDY4_COL		       EQU  59                  ; column of the 4th candy
+CANDY4_COL             EQU  59                  ; column of the 4th candy
 
 ; Colours
 YLW                    EQU 0FFF0H               ; pixel color: yellow in ARGB (opaque, red and green at maximum, blue at 0)
@@ -212,11 +212,11 @@ DEF_OPEN_PAC_UP_LEFT:                           ; table that defines pacman with
 DEF_OPEN_PAC_UP_RIGHT:                          ; table that defines pacman with its mouth open upwards and to the right (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		0, YLW, YLW, 0, 0               ;   ##
-    WORD		YLW, YLW, 0, 0, 0               ; ##   
-    WORD		YLW, YLW, 0, 0, YLW             ; ##  # 
-    WORD		YLW, YLW, YLW, YLW, YLW         ; ##### 
-    WORD		0, YLW, YLW, YLW, 0             ;  ### 
+    WORD        0, YLW, YLW, 0, 0               ;   ##
+    WORD        YLW, YLW, 0, 0, 0               ; ##   
+    WORD        YLW, YLW, 0, 0, YLW             ; ##  # 
+    WORD        YLW, YLW, YLW, YLW, YLW         ; ##### 
+    WORD        0, YLW, YLW, YLW, 0             ;  ### 
 
 DEF_OPEN_PAC_DOWN_LEFT:                         ; table that defines pacman with its mouth open downwards and to the left (height, width, pixels, color)
     WORD        PAC_HEIGHT
@@ -230,11 +230,11 @@ DEF_OPEN_PAC_DOWN_LEFT:                         ; table that defines pacman with
 DEF_OPEN_PAC_DOWN_RIGHT:                        ; table that defines pacman with its mouth open downwards and to the right (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		0, YLW, YLW, YLW, 0             ;  ### 
-    WORD		YLW, YLW, YLW, YLW, YLW         ; #####
-    WORD		YLW, YLW, 0, 0, YLW             ; ##  #  
-    WORD		YLW, YLW, 0, 0, 0               ; ##   
-    WORD		0, YLW, YLW, 0, 0               ;   ##
+    WORD        0, YLW, YLW, YLW, 0             ;  ### 
+    WORD        YLW, YLW, YLW, YLW, YLW         ; #####
+    WORD        YLW, YLW, 0, 0, YLW             ; ##  #  
+    WORD        YLW, YLW, 0, 0, 0               ; ##   
+    WORD        0, YLW, YLW, 0, 0               ;   ##
 
 DEF_L_BLUE_GHOST:                               ; table that defines the blue ghost (height, width, pixels, color)
     WORD        GHOST_HEIGHT
