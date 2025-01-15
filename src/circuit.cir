@@ -1534,39 +1534,39 @@
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
     "defaultPenColor" : 61455,
-    "image paths" : [ "assets/images/start.png", "assets/images/background.png", "assets/images/paused.png", "assets/images/game_over.png", "assets/images/over_by_time.png", "assets/images/win.png" ],
+    "image paths" : [ "../assets/images/start.png", "../assets/images/background.png", "../assets/images/paused.png", "../assets/images/game_over.png", "../assets/images/over_by_time.png", "../assets/images/win.png" ],
     "sounds/videos settings" : [ {
-      "filePathName" : "assets/sound/pacman_theme.wav",
+      "filePathName" : "../assets/sound/pacman_theme.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "assets/sound/pacman_chomp.wav",
+      "filePathName" : "../assets/sound/pacman_chomp.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "assets/images/ghosts.gif",
+      "filePathName" : "../assets/images/ghosts.gif",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "assets/sound/game_over.wav",
+      "filePathName" : "../assets/sound/game_over.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "assets/sound/win.wav",
+      "filePathName" : "../assets/sound/win.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : false
     }, {
-      "filePathName" : "assets/sound/pacman_eatfruit.wav",
+      "filePathName" : "../assets/sound/pacman_eatfruit.wav",
       "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
