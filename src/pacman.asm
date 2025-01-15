@@ -18,7 +18,7 @@ INITAL_NUM_GHOSTS      EQU 0                    ; number of ghosts initially in 
 NUM_COL                EQU 64                   ; decimal number of columns on the screen
 MIDDLE_LIN             EQU 10H                  ; hexadecimal number for the middle row of the screen
 MIDDLE_COL             EQU 20H                  ; hexadecimal number for the middle column of the screen
-GHOST_RYTHM            EQU 6                    ; change the value to change the speed of ghost evolution ((clock * GHOST_RYTHM) / 1000 = ghost evolution in seconds, clock = 500 ms)
+GHOST_RYTHM            EQU 2                    ; change the value to change the speed of ghost evolution ((clock * GHOST_RYTHM) / 1000 = ghost evolution in seconds, clock = 500 ms)
 
 ; MediaCenter
 DEF_LINE               EQU 600AH                ; address of the command to define the line
