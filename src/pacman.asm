@@ -94,20 +94,20 @@ GHOST2_START_COL       EQU 0                    ; initial column of ghost 2 (nex
 GHOST3_START_COL       EQU 58                   ; initial column of ghost 3 (next to the left limit)
 BOX_LIN                EQU 11                   ; row of the box
 BOX_COL	               EQU 26                   ; column of the box
-CANDY1_LIN			   EQU  1                   ; row of the 1st candy
-CANDY1_COL		       EQU  1   	            ; column of the 1st candy
-CANDY2_LIN			   EQU  1                   ; row of the 2nd candy
-CANDY2_COL		       EQU  59 	                ; column of the 2nd candy
-CANDY3_LIN			   EQU  27                  ; row of the 3rd candy
-CANDY3_COL		       EQU  1 		            ; column of the 3rd candy
-CANDY4_LIN			   EQU  27                  ; row of the 4th candy
-CANDY4_COL		       EQU  59		            ; column of the 4th candy
+CANDY1_LIN             EQU  1                   ; row of the 1st candy
+CANDY1_COL		       EQU  1                   ; column of the 1st candy
+CANDY2_LIN             EQU  1                   ; row of the 2nd candy
+CANDY2_COL		       EQU  59                  ; column of the 2nd candy
+CANDY3_LIN             EQU  27                  ; row of the 3rd candy
+CANDY3_COL		       EQU  1                   ; column of the 3rd candy
+CANDY4_LIN             EQU  27                  ; row of the 4th candy
+CANDY4_COL		       EQU  59                  ; column of the 4th candy
 
 ; Colours
-YLW                    EQU 0FFF0H	            ; pixel color: yellow in ARGB (opaque, red and green at maximum, blue at 0)
+YLW                    EQU 0FFF0H               ; pixel color: yellow in ARGB (opaque, red and green at maximum, blue at 0)
 RED                    EQU 0FF00H               ; pixel color: red in ARGB (opaque and red at maximum, green and blue at 0)
 CYAN                   EQU 0F4FFH               ; pixel color: cyan in ARGB (opaque, red at 4, green and blue at maximum)
-BLUE                   EQU 0F00FH	            ; pixel color: blue in ARGB (opaque, red and green at 0, blue at maximum)
+BLUE                   EQU 0F00FH               ; pixel color: blue in ARGB (opaque, red and green at 0, blue at maximum)
 PINK                   EQU 0FFAFH               ; pixel color: pink in ARGB (opaque and red at maximum, green at 10 and blue at maximum)
 ORNG                   EQU 0FFA0H               ; pixel color: orange in ARGB (opaque and red at maximum, green at 10 and blue at 0)
 L_RED                  EQU 0FF55H               ; pixel color: light red in ARGB (opaque and red at maximum, green and blue at 5)
@@ -116,15 +116,15 @@ L_BLUE                 EQU 0F0FFH               ; pixel color: light blue in ARG
 
 ; Measurements
 PAC_HEIGHT             EQU 5                    ; pacman's height
-PAC_WIDTH		       EQU 5		            ; pacman's width
+PAC_WIDTH              EQU 5                    ; pacman's width
 GHOST_HEIGHT           EQU 4                    ; the height of the ghost
-GHOST_WIDTH		       EQU 4		            ; the width of the ghost
+GHOST_WIDTH            EQU 4                    ; the width of the ghost
 CANDY_HEIGHT           EQU 4                    ; the height of the candy
 CANDY_WIDTH            EQU 4                    ; the width of the candy
 EXPLOSION_HEIGHT       EQU 5                    ; the height of the explosion
 EXPLOSION_WIDTH        EQU 5                    ; the width of the explosion
 BOX_HEIGHT             EQU 8                    ; the height of the box
-BOX_WIDTH	           EQU 12		            ; the width of the box
+BOX_WIDTH              EQU 12                   ; the width of the box
 
 ; Game States
 GAME_STATE             EQU 3FEAH                ; address in memory where the current game state is stored
@@ -158,20 +158,20 @@ int_3: WORD 0                                   ; if 1, indicates that interrupt
 DEF_PACMAN:                                     ; table that defines pacman (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		0, YLW, YLW, YLW, 0             ;  ### 
-    WORD		YLW, YLW, YLW, YLW, YLW         ; #####   
-    WORD		YLW, YLW, YLW, YLW, YLW         ; #####   
-    WORD		YLW, YLW, YLW, YLW, YLW         ; ##### 
-    WORD		0, YLW, YLW, YLW, 0             ;  ### 
+    WORD        0, YLW, YLW, YLW, 0             ;  ### 
+    WORD        YLW, YLW, YLW, YLW, YLW         ; #####   
+    WORD        YLW, YLW, YLW, YLW, YLW         ; #####   
+    WORD        YLW, YLW, YLW, YLW, YLW         ; ##### 
+    WORD        0, YLW, YLW, YLW, 0             ;  ### 
 
 DEF_OPEN_PAC_LEFT:                              ; table that defines pacman with its mouth open to the left (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		YLW, YLW, YLW, 0, 0             ; ### 
-    WORD		0, YLW, YLW, YLW, 0             ;  ###
-    WORD		0, 0, YLW, YLW, 0               ;   ##
-    WORD		0, YLW, YLW, YLW, 0             ;  ###
-    WORD		YLW, YLW, YLW, 0, 0             ; ###
+    WORD        YLW, YLW, YLW, 0, 0             ; ### 
+    WORD        0, YLW, YLW, YLW, 0             ;  ###
+    WORD        0, 0, YLW, YLW, 0               ;   ##
+    WORD        0, YLW, YLW, YLW, 0             ;  ###
+    WORD        YLW, YLW, YLW, 0, 0             ; ###
 
 DEF_OPEN_PAC_RIGHT:                             ; table that defines pacman with its mouth open to the right (height, width, pixels, color)
     WORD        PAC_HEIGHT
@@ -194,20 +194,20 @@ DEF_OPEN_PAC_UP:                                ; table that defines pacman with
 DEF_OPEN_PAC_DOWN:                              ; table that defines pacman with its mouth open downwards (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		0, 0, 0, 0, 0                   ; 
-    WORD		0, YLW, YLW, YLW, 0             ;  ###
-    WORD		YLW, YLW, YLW, YLW, YLW         ; ##### 
-    WORD		YLW, YLW, 0, YLW, YLW           ; ## ## 
-    WORD		YLW, 0, 0, 0, YLW               ; #   # 
+    WORD        0, 0, 0, 0, 0                   ; 
+    WORD        0, YLW, YLW, YLW, 0             ;  ###
+    WORD        YLW, YLW, YLW, YLW, YLW         ; ##### 
+    WORD        YLW, YLW, 0, YLW, YLW           ; ## ## 
+    WORD        YLW, 0, 0, 0, YLW               ; #   # 
 
 DEF_OPEN_PAC_UP_LEFT:                           ; table that defines pacman with its mouth open upwards and to the left (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		0, 0, YLW, YLW, 0               ;   ##
-    WORD		0, 0, 0, YLW, YLW               ;    ## 
-    WORD		YLW, 0, 0, YLW, YLW             ; #  ## 
-    WORD		YLW, YLW, YLW, YLW, YLW         ; ##### 
-    WORD		0, YLW, YLW, YLW, 0             ;  ### 
+    WORD        0, 0, YLW, YLW, 0               ;   ##
+    WORD        0, 0, 0, YLW, YLW               ;    ## 
+    WORD        YLW, 0, 0, YLW, YLW             ; #  ## 
+    WORD        YLW, YLW, YLW, YLW, YLW         ; ##### 
+    WORD        0, YLW, YLW, YLW, 0             ;  ### 
 
 DEF_OPEN_PAC_UP_RIGHT:                          ; table that defines pacman with its mouth open upwards and to the right (height, width, pixels, color)
     WORD        PAC_HEIGHT
@@ -221,11 +221,11 @@ DEF_OPEN_PAC_UP_RIGHT:                          ; table that defines pacman with
 DEF_OPEN_PAC_DOWN_LEFT:                         ; table that defines pacman with its mouth open downwards and to the left (height, width, pixels, color)
     WORD        PAC_HEIGHT
     WORD        PAC_WIDTH
-    WORD		0, YLW, YLW, YLW, 0             ;  ###
-    WORD		YLW, YLW, YLW, YLW, YLW         ; ##### 
-    WORD		YLW, 0, 0, YLW, YLW             ; #  ##
-    WORD		0, 0, 0, YLW, YLW               ;    ##  
-    WORD		0, 0, YLW, YLW, 0               ;   ##
+    WORD        0, YLW, YLW, YLW, 0             ;  ###
+    WORD        YLW, YLW, YLW, YLW, YLW         ; ##### 
+    WORD        YLW, 0, 0, YLW, YLW             ; #  ##
+    WORD        0, 0, 0, YLW, YLW               ;    ##  
+    WORD        0, 0, YLW, YLW, 0               ;   ##
 
 DEF_OPEN_PAC_DOWN_RIGHT:                        ; table that defines pacman with its mouth open downwards and to the right (height, width, pixels, color)
     WORD        PAC_HEIGHT
